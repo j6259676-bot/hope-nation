@@ -1,0 +1,2945 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --yellow: #F2C94C; --yellow-light: #FDF6E0; --yellow-dark: #D4A82E;
+      --teal: #2D3A3A; --steel: #5A7080; --black: #1E1E1E; --white: #FFFFFF;
+      --bg: #F5F4F0; --border: #E5E2DA; --border-light: #EEEAE2; --muted: #9A9690;
+      --safe-top: env(safe-area-inset-top);
+      --safe-bottom: env(safe-area-inset-bottom);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg); color: var(--black);
+      min-height: 100vh; min-height: -webkit-fill-available;
+      overscroll-behavior-y: none;
+      -webkit-text-size-adjust: 100%;
+    }
+    body { padding-bottom: var(--safe-bottom); }
+    input, select, textarea, button { font-family: inherit; font-size: 16px; }
+    button { -webkit-appearance: none; appearance: none; }
+    a { -webkit-touch-callout: none; }
+
+    .header {
+      background: var(--black);
+      padding: calc(14px + var(--safe-top)) 20px 14px;
+    }
+    .header-inner { max-width: 540px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-bar { width: 4px; height: 32px; background: var(--yellow); border-radius: 2px; }
+    .header-brand { font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(--yellow); font-weight: 700; margin-bottom: 2px; }
+    .header-title { font-size: 20px; font-weight: 900; color: var(--white); letter-spacing: -0.5px; }
+    .header-role {
+      border: none; border-radius: 22px; padding: 10px 18px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: transform 0.15s; letter-spacing: 0.5px;
+      min-height: 40px;
+    }
+    .header-role:active { transform: scale(0.94); }
+    .header-role.admin { background: var(--yellow); color: var(--black); }
+    .header-role.staff { background: rgba(255,255,255,0.1); color: #BBB; }
+
+    .nav { background: var(--teal); padding: 0 12px; position: sticky; top: 0; z-index: 100; }
+    .nav-inner { max-width: 540px; margin: 0 auto; display: flex; }
+    .nav-btn {
+      flex: 1; padding: 14px 0 12px;
+      border: none; background: none; cursor: pointer;
+      font-size: 15px; font-weight: 400;
+      color: rgba(255,255,255,0.45); letter-spacing: 1px;
+      border-bottom: 3px solid transparent; transition: all 0.2s;
+      min-height: 48px;
+    }
+    .nav-btn:active { background: rgba(255,255,255,0.05); }
+    .nav-btn.active { color: var(--yellow); font-weight: 700; border-bottom-color: var(--yellow); }
+
+    .main { max-width: 540px; margin: 0 auto; padding: 16px 16px calc(120px + var(--safe-bottom)); }
+
+    .card {
+      background: var(--white); border-radius: 16px; padding: 16px;
+      border: 1px solid var(--border); margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .input {
+      width: 100%; padding: 13px 14px; font-size: 16px;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      background: #FDFCF9; outline: none;
+      -webkit-appearance: none; appearance: none;
+      min-height: 48px;
+      transition: border-color 0.15s;
+    }
+    .input:focus { border-color: var(--steel); }
+    select.input { background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239A9690' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    textarea.input { min-height: 64px; resize: vertical; line-height: 1.5; }
+
+    .session-pills { display: flex; gap: 8px; margin-bottom: 12px; }
+    .session-pill {
+      flex: 1; padding: 13px 0; border-radius: 12px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      border: 1.5px solid var(--border); background: var(--white);
+      color: var(--muted); transition: all 0.15s;
+      min-height: 48px;
+    }
+    .session-pill:active { transform: scale(0.96); }
+    .session-pill.active-930 { background: var(--yellow); color: var(--black); border-color: var(--yellow); }
+    .session-pill.active-1130 { background: var(--steel); color: var(--white); border-color: var(--steel); }
+    .session-pill.active-200 { background: var(--teal); color: var(--white); border-color: var(--teal); }
+
+    .btn-primary {
+      width: 100%; padding: 16px;
+      background: var(--yellow); color: var(--black);
+      border: none; border-radius: 14px;
+      font-size: 17px; font-weight: 700;
+      cursor: pointer; letter-spacing: 0.5px;
+      min-height: 52px;
+      box-shadow: 0 2px 8px rgba(242,201,76,0.3);
+      transition: transform 0.1s;
+    }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-dashed {
+      width: 100%; padding: 14px;
+      background: none; border: 2px dashed var(--border);
+      border-radius: 14px; color: var(--muted);
+      font-size: 15px; cursor: pointer; margin-bottom: 14px;
+      min-height: 48px;
+    }
+    .btn-dashed:active { background: rgba(0,0,0,0.02); }
+
+    .photo-upload {
+      width: 64px; height: 64px; border-radius: 50%;
+      cursor: pointer; border: 2px dashed var(--border);
+      background: #FAFAF7;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; flex-shrink: 0; position: relative;
+    }
+    .photo-upload:active { transform: scale(0.95); }
+    .photo-upload.has-photo { border: 2px solid var(--border-light); }
+    .photo-upload img { width: 100%; height: 100%; object-fit: cover; }
+
+    .avatar { border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid var(--border-light); }
+    .avatar-placeholder { border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+
+    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .anim-slide { animation: slideUp 0.3s ease-out both; }
+    .anim-fade { animation: fadeIn 0.25s ease-out both; }
+
+    .toast {
+      position: fixed; bottom: calc(32px + var(--safe-bottom)); left: 50%; transform: translateX(-50%);
+      background: var(--black); color: var(--yellow);
+      padding: 12px 28px; border-radius: 24px;
+      font-size: 14px; font-weight: 700; z-index: 999;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3); letter-spacing: 0.5px;
+      max-width: calc(100vw - 40px);
+    }
+
+    .loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(245,244,240,0.85);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; font-size: 16px; color: var(--muted);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .section-title { font-size: 22px; font-weight: 900; color: var(--black); margin-bottom: 2px; }
+    .section-sub { font-size: 14px; color: var(--muted); margin-bottom: 18px; }
+
+    .search-card {
+      background: var(--white); border-radius: 16px;
+      padding: 16px; cursor: pointer;
+      border: 1px solid var(--border); margin-bottom: 10px;
+      transition: transform 0.1s;
+    }
+    .search-card:active { transform: scale(0.99); }
+    .search-card-expand {
+      background: #FDFCF9; border-radius: 0 0 16px 16px;
+      padding: 14px 16px 18px;
+      border: 1px solid var(--border); border-top: none;
+    }
+    .note-item {
+      background: var(--white); border-radius: 12px;
+      padding: 12px 14px; border-left: 3px solid var(--yellow);
+      margin-bottom: 8px;
+    }
+
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+    .kpi-card {
+      background: var(--white); border-radius: 16px;
+      padding: 18px 10px; text-align: center;
+      border: 1px solid var(--border);
+    }
+    .kpi-value { font-size: 30px; font-weight: 900; color: var(--black); line-height: 1; }
+    .kpi-label { font-size: 11px; color: var(--muted); margin-top: 6px; font-weight: 500; }
+
+    .bar-container { display: flex; align-items: flex-end; gap: 8px; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .bar-value { font-size: 12px; font-weight: 700; color: var(--black); }
+    .bar-label { font-size: 10px; color: var(--muted); }
+
+    .progress-track { height: 8px; background: var(--border-light); border-radius: 4px; }
+    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease-out; }
+
+    .session-tag {
+      padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; font-weight: 700; display: inline-block;
+    }
+    .session-tag-930 { background: var(--yellow); color: var(--black); }
+    .session-tag-1130 { background: var(--steel); color: var(--white); }
+    .session-tag-200 { background: var(--teal); color: var(--white); }
+
+    .hidden { display: none; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .grid-2-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .mosaic { display: flex; flex-wrap: wrap; gap: 8px; }
+    .range-select {
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 12px; font-size: 13px;
+      background: var(--white); color: var(--black);
+      min-height: 36px;
+      -webkit-appearance: none; appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%239A9690' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+
+    /* 手機 ≤ 480px 微調 */
+    @media (max-width: 480px) {
+      .main { padding: 14px 14px calc(120px + var(--safe-bottom)); }
+      .card { padding: 14px; border-radius: 14px; }
+      .kpi-value { font-size: 26px; }
+      .section-title { font-size: 20px; }
+      .grid-3 { gap: 8px; }
+    }
+
+    /* 平板／桌機 ≥ 700px：加寬容器、排班 grid 與名冊用雙欄（#6 響應式） */
+    @media (min-width: 700px) {
+      .header-inner, .nav-inner, .main { max-width: 760px; }
+      .sched-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+      .sched-two-col > * { margin-bottom: 0 !important; }
+    }
+    @media (min-width: 1040px) {
+      .header-inner, .nav-inner, .main { max-width: 920px; }
+      .sched-two-col { grid-template-columns: 1fr 1fr 1fr; }
+    }
+
+    /* 防止 input focus 時 iOS 鍵盤頂掉畫面 */
+    @supports (-webkit-touch-callout: none) {
+      .input { font-size: 16px !important; }
+    }
+
+    /* Lightbox */
+    .lightbox-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+      z-index: 1000; display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    .lightbox-img { max-width: 90vw; max-height: 90vh; border-radius: 12px; object-fit: contain; }
+  </style>
+</head>
+<body>
+  <datalist id="dl-names"></datalist>
+  <datalist id="dl-ytIds"></datalist>
+  <datalist id="dl-countries"></datalist>
+  <datalist id="dl-cities"></datalist>
+  <datalist id="dl-submitters"></datalist>
+
+  <div class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="header-bar"></div>
+        <div>
+          <div class="header-brand">The Hope</div>
+          <div class="header-title">Hope Nation 家人們</div>
+        </div>
+      </div>
+      <button id="roleBtn" class="header-role staff" onclick="toggleRole()">服事夥伴</button>
+    </div>
+  </div>
+
+  <div class="nav"><div class="nav-inner" id="navBar"></div></div>
+  <div class="main" id="mainContent"></div>
+  <div id="toast" class="toast hidden"></div>
+  <div id="loading" class="loading-overlay hidden">載入中...</div>
+  <div id="acDrop" style="display:none;position:fixed;z-index:300;background:var(--black);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.35);overflow:hidden;max-height:320px;overflow-y:auto;width:260px"></div>
+
+  <script>
+    // ============================================================
+    // [遷移 shim] google.script.run → fetch（GitHub Pages 跨網域呼叫 GAS JSON API）
+    // 2026-06-06 前端遷移計畫產生。背後改走 doPost，下方 34 處原呼叫完全不需改動。
+    // 上線步驟：redeploy 生產含 router 後，把 API_BASE 換成生產 /exec 即可。
+    // ============================================================
+    (function () {
+      // 開發期 = @60 驗證部署（已含 router、匿名可存取）；上線換生產 ...DIcaA
+      var API_BASE = 'https://script.google.com/macros/s/AKfycbycmIWd7sLNntSoBNq5_dRVqT5iyipeXheQyN2Crsgzbf7AbtSOplrXPRjn-OiRrQP75Q/exec';
+
+      function callBackend(name, args) {
+        return fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 簡單請求，避開 CORS preflight
+          body: JSON.stringify({ action: name, args: args || [] })
+        }).then(function (r) { return r.json(); });
+      }
+
+      function makeRunner() {
+        var ctx = { ok: null, fail: null, uo: undefined };
+        var runner = {
+          withSuccessHandler: function (fn) { ctx.ok = fn; return proxy; },
+          withFailureHandler: function (fn) { ctx.fail = fn; return proxy; },
+          withUserObject: function (o) { ctx.uo = o; return proxy; }
+        };
+        var proxy = new Proxy(runner, {
+          get: function (target, prop) {
+            if (prop in target) return target[prop];
+            if (typeof prop !== 'string') return undefined;
+            // 其餘任何屬性 = 後端函式名 → 改走 fetch
+            return function () {
+              var args = Array.prototype.slice.call(arguments);
+              callBackend(prop, args).then(function (res) {
+                if (ctx.ok) ctx.ok(res, ctx.uo);
+              }).catch(function (err) {
+                if (ctx.fail) ctx.fail((err && err.message) ? err : { message: String(err) }, ctx.uo);
+              });
+            };
+          }
+        });
+        return proxy;
+      }
+
+      window.google = window.google || {};
+      window.google.script = {
+        get run() { return makeRunner(); },
+        host: { close: function () {}, setHeight: function () {}, setWidth: function () {}, origin: '', editor: { focus: function () {} } },
+        url: { getLocation: function (cb) { if (cb) cb({ parameter: {}, parameters: {}, hash: '' }); } }
+      };
+    })();
+
+    let adminToken = '';
+    try { adminToken = sessionStorage.getItem('adminToken') || ''; } catch(e) {}
+    let isAdmin = !!adminToken;
+    const COUNTRIES = [
+    "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Argentina", "Armenia",
+    "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados",
+    "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina",
+    "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cambodia",
+    "Cameroon", "Canada", "Cape Verde", "Central African Republic", "Chad", "Chile",
+    "China", "Colombia", "Comoros", "Costa Rica", "Croatia", "Cuba", "Cyprus",
+    "Czech Republic", "Democratic Republic of the Congo", "Denmark", "Djibouti",
+    "Dominican Republic", "East Timor", "Ecuador", "Egypt", "El Salvador",
+    "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland",
+    "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Guatemala",
+    "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hong Kong", "Hungary",
+    "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy",
+    "Ivory Coast", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati",
+    "Kosovo", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia",
+    "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Macau", "Madagascar", "Malawi",
+    "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius",
+    "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco",
+    "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand",
+    "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman",
+    "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru",
+    "Philippines", "Poland", "Portugal", "Qatar", "Republic of the Congo", "Romania",
+    "Russia", "Rwanda", "Samoa", "San Marino", "Saudi Arabia", "Senegal", "Serbia",
+    "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands",
+    "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan",
+    "Suriname", "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania",
+    "Thailand", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan",
+    "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States",
+    "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen",
+    "Zambia", "Zimbabwe"
+    ];
+    let activeTab = adminToken ? 'search' : 'record';
+    let searchResults = [];
+    let expandedId = null;
+    let expandedNotes = new Set();
+    let gatherings = [];
+    let dashboardData = null;
+    let dashSessionFilter = 'all';
+    let dashRangeMonths = 3;
+    let _dashStories = [];
+    let historicalValues = { names: [], ytIds: [], countries: [], cities: [], submitters: [] };
+
+
+    function loadHistorical() {
+      google.script.run
+        .withSuccessHandler(function(d) { historicalValues = d; updateDatalists(); })
+        .getHistoricalValues();
+    }
+    function updateDatalists() {
+      const fill = (id, arr) => { document.getElementById(id).innerHTML = arr.map(v => '<option value="' + esc(v) + '">').join(''); };
+      fill('dl-names', historicalValues.names);
+      fill('dl-ytIds', historicalValues.ytIds);
+      fill('dl-countries', historicalValues.countries);
+      fill('dl-cities', historicalValues.cities);
+      fill('dl-submitters', historicalValues.submitters);
+    }
+
+    const staffTabs = ['record', 'search', 'schedule'];
+    const adminTabs = ['record', 'search', 'gathering', 'dashboard', 'dedupe', 'photo', 'schedule'];
+
+    // 去重審核 state
+    let dedupeGroups = [];
+    let dedupeTotal = 0;
+    let dedupeIdx = 0;
+    let dedupeLoaded = false;
+    let dedupeChecked = []; // 每個 member 是否勾選
+
+    // 合照配對 state
+    let photoState = 'idle'; // idle | parsing | review | submitting | done
+    let photoOriginalBase64 = null;
+    let photoImage = null; // 預載入 Image 物件，供 Canvas 裁切用
+    let photoMatches = []; // matchZoomTiles 結果
+    let photoChecked = {}; // index → boolean
+    let photoManualMap = {}; // index → {name, rowIndex, hasPhoto}
+    let allPersonsList = []; // getAllPersonsForSearch() 結果
+
+    // === Schedule Tab state ===
+    let schedPersonRow = parseInt(localStorage.getItem('schedPersonRow') || '0');
+    let schedPersonName = localStorage.getItem('schedPersonName') || '';
+    let schedViewData = null;   // { period, slots, entries }
+    let schedLocalEntries = {}; // 本機即時狀態（key: "date|session"）
+    let schedSubView = 'fill';  // 'fill' | 'mine'
+    let schedACInput = '';
+    let schedACResults = [];
+    let schedPending = {};      // 待送出的 entries batch
+    let schedBatchTimer = null;
+    let schedLoading = false;
+    let schedMyFixedSessions = JSON.parse(localStorage.getItem('schedMyFixedSessions') || 'null'); // null=未設定, []=空
+    let schedMyFixedRoles    = JSON.parse(localStorage.getItem('schedMyFixedRoles')    || '[]');
+    let schedStaffList = null;  // admin 管理名單
+    let schedStaffLoading = false;
+    let schedAddStaffInput = '';
+    let schedStaffSessionFilter = localStorage.getItem('schedStaffSessionFilter') || '全部'; // 名單依場次篩選（點 6）
+    let schedShowHelp = localStorage.getItem('schedShowHelp') !== 'false'; // 預設展開
+    // Admin 總覽
+    let schedRosterData = null;      // 公開名冊 { period, slots, roster }（點 7）
+    let schedRosterLoading = false;
+    let schedOverviewData = null;    // { period, slots, grid }
+    let schedOverviewLoading = false;
+    let schedOverviewSubView = 'status'; // 'status' | 'grid'
+    let schedUnfilledData = null;    // { unfilled: [{rowIndex, name}] }
+
+    function renderNav() {
+      const tabs = isAdmin ? adminTabs : staffTabs;
+      const labels = { record: '記錄', search: '查詢', gathering: '聚會', dashboard: '總覽', dedupe: '去重', photo: '合照', schedule: '排班' };
+      document.getElementById('navBar').innerHTML = tabs.map(t =>
+        '<button class="nav-btn ' + (activeTab === t ? 'active' : '') + '" onclick="switchTab(\'' + t + '\')">' + labels[t] + '</button>'
+      ).join('');
+      const btn = document.getElementById('roleBtn');
+      btn.className = 'header-role ' + (isAdmin ? 'admin' : 'staff');
+      btn.textContent = isAdmin ? 'ADMIN' : '服事夥伴';
+      if (!tabs.includes(activeTab)) activeTab = 'record';
+      renderTab();
+    }
+
+function renderTab() {
+      const main = document.getElementById('mainContent');
+      if (activeTab === 'record') renderRecordTab(main);
+      else if (activeTab === 'search') renderSearchTab(main);
+      else if (activeTab === 'gathering') renderGatheringTab(main);
+      else if (activeTab === 'dashboard') renderDashboardTab(main);
+      else if (activeTab === 'dedupe') renderDedupeTab(main);
+      else if (activeTab === 'photo') renderPhotoTab(main);
+      else if (activeTab === 'schedule') renderScheduleTab(main);
+    }
+
+    function switchTab(tab) { activeTab = tab; renderNav(); }
+
+function toggleRole() {
+  if (isAdmin) {
+    if (!confirm('確定要登出 Admin 嗎?')) return;
+    google.script.run.adminLogout(adminToken);
+    adminToken = '';
+    try { sessionStorage.removeItem('adminToken'); } catch(e) {}
+    isAdmin = false;
+    if (activeTab === 'gathering' || activeTab === 'dashboard' || activeTab === 'dedupe' || activeTab === 'photo') activeTab = 'search';
+    dashboardData = null;
+    gatherings = [];
+    renderNav();
+    showToast('已登出');
+  } else {
+    const pwd = prompt('請輸入 Admin 密碼:');
+    if (!pwd) return;
+    showLoading();
+    google.script.run
+      .withSuccessHandler(function(r) {
+        hideLoading();
+        if (r.success) {
+          adminToken = r.token;
+          try { sessionStorage.setItem('adminToken', adminToken); } catch(e) {}
+          isAdmin = true;
+          renderNav();
+          showToast('Admin 登入成功');
+        } else {
+          showToast(r.error || '登入失敗');
+        }
+      })
+      .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + e.message); })
+      .verifyAdminPassword(pwd);
+  }
+}
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 2200);
+    }
+    function showLoading() { document.getElementById('loading').classList.remove('hidden'); }
+    function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
+
+    function openPhotoLightbox(url) {
+      let overlay = document.getElementById('lightboxOverlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'lightboxOverlay';
+        overlay.className = 'lightbox-overlay';
+        overlay.onclick = function() { this.style.display = 'none'; };
+        const img = document.createElement('img');
+        img.id = 'lightboxImg';
+        img.className = 'lightbox-img';
+        overlay.appendChild(img);
+        document.body.appendChild(overlay);
+      }
+      document.getElementById('lightboxImg').src = url;
+      overlay.style.display = 'flex';
+    }
+
+    function toggleNotes(idx) {
+      if (expandedNotes.has(idx)) expandedNotes.delete(idx);
+      else expandedNotes.add(idx);
+      renderSearchTab(document.getElementById('mainContent'));
+    }
+
+    function showPersonModal(idx) {
+      const p = _dashStories[idx];
+      if (!p) return;
+      let modal = document.getElementById('personModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'personModal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;justify-content:center;cursor:pointer';
+        modal.onclick = function(e) { if (e.target === modal) closePersonModal(); };
+        document.body.appendChild(modal);
+      }
+      let html = '<div style="background:var(--white);border-radius:24px 24px 0 0;width:100%;max-width:540px;max-height:85vh;overflow-y:auto;cursor:default;padding:20px 16px calc(20px + var(--safe-bottom));animation:slideUp 0.25s ease-out">';
+      html += '<div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px"></div>';
+      html += '<div style="display:flex;gap:14px;align-items:center;margin-bottom:16px">';
+      if (p.photo) {
+        const bigUrl = p.photo.replace('sz=w400', 'sz=w2000');
+        html += '<img src="' + p.photo + '" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border-light);cursor:zoom-in;flex-shrink:0" onclick="openPhotoLightbox(\'' + bigUrl + '\')" alt="">';
+      } else {
+        html += avatarHTML('', p.name, p.gender, 64);
+      }
+      html += '<div><div style="font-size:20px;font-weight:900;color:var(--black)">' + esc(p.name || '(無名)') + '</div>';
+      if (p.ytId) html += '<div style="font-size:13px;color:var(--muted);margin-top:2px">' + esc(p.ytId) + '</div>';
+      html += '</div></div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">';
+      if (p.country) html += '<span style="background:var(--yellow-light);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;color:var(--yellow-dark)">' + getFlag(p.country) + ' ' + esc(p.country) + (p.city ? ' · ' + esc(p.city) : '') + '</span>';
+      if (p.gender) html += '<span style="background:var(--border-light);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;color:var(--steel)">' + esc(p.gender) + '</span>';
+      if (p.session) html += sessionTagHTML(p.session);
+      html += '</div>';
+      html += '<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:0.5px">近況紀錄（' + (p.notes ? p.notes.length : 0) + ' 筆）</div>';
+      if (p.notes && p.notes.length > 0) {
+        p.notes.forEach(n => {
+          const metaParts = [n.date, n.submitter ? esc(n.submitter) : ''].filter(Boolean);
+          const meta = metaParts.join(' · ') + (n.session ? ' ' + sessionTagHTML(n.session) : '');
+          html += '<div class="note-item"><div style="font-size:11px;color:var(--yellow-dark);margin-bottom:3px;font-weight:500">' + meta + '</div><div style="font-size:14px;color:#444;line-height:1.5">' + esc(n.text) + '</div></div>';
+        });
+      } else {
+        html += '<div style="color:var(--muted);font-size:13px;padding:12px 0">尚無近況紀錄</div>';
+      }
+      html += '</div>';
+      modal.innerHTML = html;
+      modal.style.display = 'flex';
+    }
+
+    function closePersonModal() {
+      const modal = document.getElementById('personModal');
+      if (modal) modal.style.display = 'none';
+    }
+    function getSessionClass(s) { if (s === '9:30') return '930'; if (s === '11:30') return '1130'; if (s === '2:00') return '200'; return '930'; }
+    function avatarHTML(photo, name, gender, size) {
+      size = size || 38;
+      if (photo) return '<img src="' + photo + '" class="avatar" style="width:' + size + 'px;height:' + size + 'px" alt="">';
+      const bg = gender === '女' ? '#F3E8EF' : '#E6EEF3';
+      const color = gender === '女' ? '#9B6B8A' : '#5A7080';
+      return '<div class="avatar-placeholder" style="width:' + size + 'px;height:' + size + 'px;background:' + bg + ';font-size:' + (size * 0.42) + 'px;color:' + color + '">' + ((name||'?')[0]) + '</div>';
+    }
+    function sessionTagHTML(s) { if (!s) return ''; return '<span class="session-tag session-tag-' + getSessionClass(s) + '">' + s + '</span>'; }
+    const FLAGS = {"台灣":"🇹🇼","美國":"🇺🇸","日本":"🇯🇵","韓國":"🇰🇷","菲律賓":"🇵🇭","越南":"🇻🇳","香港":"🇭🇰","新加坡":"🇸🇬","印尼":"🇮🇩","印度":"🇮🇳","馬來西亞":"🇲🇾","泰國":"🇹🇭","中國":"🇨🇳","China":"🇨🇳","Taiwan":"🇹🇼"};
+    function getFlag(c) { return FLAGS[c] || '🌍'; }
+    function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function compressImage(dataUrl, maxWidth, quality, callback) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = h * maxWidth / w; w = maxWidth; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL('image/jpeg', quality || 0.7));
+      };
+      img.src = dataUrl;
+    }
+
+    // === Record Tab ===
+    let recordPersons = [{ name: '', ytId: '', gender: '', country: '', city: '', note: '', photo: '' }];
+    let recordSession = '';
+    let recordSubmitter = '';
+
+    function renderRecordTab(el) {
+      let html = '<div class="anim-fade">';
+      html += '<div class="section-title">認識的家人</div>';
+      html += '<div class="section-sub">今天在一起聊一下認識了誰?</div>';
+      html += '<input class="input" list="dl-submitters" placeholder="填寫人 (你的名字) *" value="' + esc(recordSubmitter) + '" onchange="recordSubmitter=this.value" style="margin-bottom:12px">';
+      html += '<div class="session-pills" style="margin-bottom:16px">';
+      ['9:30', '11:30', '2:00'].forEach(s => {
+        const cls = recordSession === s ? ' active-' + getSessionClass(s) : '';
+        html += '<button class="session-pill' + cls + '" onclick="setRecordSession(\'' + s + '\')">' + s + '</button>';
+      });
+      html += '</div>';
+
+      recordPersons.forEach((p, idx) => {
+        html += '<div class="card anim-slide" style="animation-delay:' + (idx * 0.05) + 's;position:relative">';
+        if (recordPersons.length > 1) html += '<button onclick="removeRecordPerson(' + idx + ')" style="position:absolute;top:10px;right:12px;background:none;border:none;color:#CCC;font-size:18px;cursor:pointer">×</button>';
+        html += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">';
+        html += '<div class="photo-upload' + (p.photo ? ' has-photo' : '') + '" onclick="triggerPhotoUpload(' + idx + ')">';
+        if (p.photo) html += '<img src="' + p.photo + '">';
+        else html += '<div style="text-align:center;line-height:1.2"><div style="font-size:20px;color:var(--muted)">+</div><div style="font-size:9px;color:var(--muted);font-weight:500">照片</div></div>';
+        html += '</div>';
+        html += '<input type="file" id="photoInput' + idx + '" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoUpload(' + idx + ', this)">';
+        html += '<div style="flex:1">';
+        html += '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:700;letter-spacing:1px">第 ' + (idx + 1) + ' 位 (姓名或 YT 至少填一個)</div>';
+        html += '<div class="grid-2" style="margin-bottom:0">';
+        html += '<div style="position:relative"><input class="input" id="nameInput' + idx + '" placeholder="姓名" autocomplete="off" value="' + esc(p.name) + '" oninput="nameAC(this,' + idx + ')" onblur="closeACDelayed()"></div>';
+        html += '<div style="position:relative"><input class="input" id="ytInput' + idx + '" placeholder="YT 帳號" autocomplete="off" value="' + esc(p.ytId) + '" oninput="nameAC(this,' + idx + ')" onblur="closeACDelayed()"></div>';
+        html += '</div></div></div>';
+        html += '<div class="grid-3">';
+        html += '<select class="input" style="color:' + (p.gender ? 'var(--black)' : 'var(--muted)') + '" onchange="updateRecordPerson(' + idx + ',\'gender\',this.value)">';
+        html += '<option value="">性別</option><option value="男"' + (p.gender === '男' ? ' selected' : '') + '>男</option><option value="女"' + (p.gender === '女' ? ' selected' : '') + '>女</option></select>';
+        html += '<select class="input" style="color:' + (p.country ? 'var(--black)' : 'var(--muted)') + '" onchange="updateRecordPerson(' + idx + ',\'country\',this.value)"><option value="">國家</option>' + COUNTRIES.map(c => '<option value="' + c + '"' + (p.country === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
+        html += '<input class="input" list="dl-cities" placeholder="城市" value="' + esc(p.city) + '" onchange="updateRecordPerson(' + idx + ',\'city\',this.value)">';
+        html += '</div>';
+        html += '<textarea class="input" placeholder="近況備註..." onchange="updateRecordPerson(' + idx + ',\'note\',this.value)">' + esc(p.note) + '</textarea>';
+        html += '</div>';
+      });
+
+      html += '<button class="btn-dashed" onclick="addRecordPerson()">+ 再加一位</button>';
+      html += '<button class="btn-primary" onclick="submitRecords()">送出紀錄</button>';
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    function setRecordSession(s) { recordSession = s; renderRecordTab(document.getElementById('mainContent')); }
+    function updateRecordPerson(idx, field, val) { recordPersons[idx][field] = val; }
+    function addRecordPerson() { recordPersons.push({ name: '', ytId: '', gender: '', country: '', city: '', note: '', photo: '' }); renderRecordTab(document.getElementById('mainContent')); }
+    function removeRecordPerson(idx) { if (recordPersons.length > 1) { recordPersons.splice(idx, 1); renderRecordTab(document.getElementById('mainContent')); } }
+    function triggerPhotoUpload(idx) { document.getElementById('photoInput' + idx).click(); }
+    function handlePhotoUpload(idx, input) {
+      const file = input.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        compressImage(e.target.result, 400, 0.7, function(c) {
+          recordPersons[idx].photo = c;
+          renderRecordTab(document.getElementById('mainContent'));
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function submitRecords() {
+      const valid = recordPersons.filter(p => p.name.trim() || p.ytId.trim());
+      if (valid.length === 0) { showToast('請至少填寫姓名或 YT 帳號'); return; }
+      if (!recordSession) { showToast('請選擇場次'); return; }
+      if (!recordSubmitter.trim()) { showToast('請填寫你的名字'); return; }
+      showLoading();
+      const records = valid.map(p => ({
+        name: p.name.trim(), ytId: p.ytId.trim(), gender: p.gender,
+        country: p.country.trim(), city: p.city.trim(), note: p.note.trim(),
+        photoBase64: p.photo || ''
+      }));
+      google.script.run
+        .withSuccessHandler(function(r) {
+          hideLoading();
+          recordPersons = [{ name: '', ytId: '', gender: '', country: '', city: '', note: '', photo: '' }];
+          renderRecordTab(document.getElementById('mainContent'));
+          loadHistorical();
+          if (r.suggestions && r.suggestions.length > 0) {
+            showMergeSuggestions(r.suggestions);
+          } else {
+            showToast('已新增 ' + r.count + ' 筆紀錄');
+          }
+        })
+        .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + e.message); })
+        .addPersonRecords(records, recordSession, recordSubmitter);
+    }
+
+    // === Search Tab ===
+    function renderSearchTab(el) {
+      let html = '<div class="anim-fade">';
+      html += '<div class="section-title">快速查詢</div>';
+      html += '<div class="section-sub">輸入姓名、YT 帳號或國家</div>';
+      html += '<input class="input" id="searchInput" type="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="搜尋姓名、YT、國家..." style="margin-bottom:16px" onkeyup="if(event.key===\'Enter\')doSearch()">';
+      if (searchResults.length > 0) {
+        html += '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;font-weight:500">找到 ' + searchResults.length + ' 位 (依最近紀錄排序)</div>';
+        searchResults.forEach((p, idx) => {
+          const isOpen = expandedId === idx;
+          html += '<div class="anim-slide" style="animation-delay:' + (idx * 0.04) + 's;margin-bottom:10px">';
+          html += '<div class="search-card" style="border-radius:' + (isOpen ? '16px 16px 0 0' : '16px') + '" onclick="toggleExpand(' + idx + ')">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+          html += '<div style="display:flex;align-items:center;gap:10px">';
+          html += avatarHTML(p.photo, p.name, p.gender, 42);
+          html += '<div><div style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px">' + esc(p.name || '(無名)');
+          if (p.ytId) html += '<span style="font-size:11px;color:var(--steel);font-weight:400">' + esc(p.ytId) + '</span>';
+          html += '</div><div style="font-size:12px;color:var(--muted);margin-top:1px;display:flex;align-items:center;gap:6px">';
+          html += getFlag(p.country) + ' ' + esc(p.country) + ' ' + esc(p.city) + ' ' + sessionTagHTML(p.session);
+          html += '</div></div></div>';
+          html += '<span style="color:#DDD;font-size:11px;transform:rotate(' + (isOpen ? '90' : '0') + 'deg)">▶</span>';
+          html += '</div></div>';
+          if (isOpen) {
+            html += '<div class="search-card-expand anim-fade">';
+            if (p.photo) {
+              const bigUrl = p.photo.replace('sz=w400', 'sz=w2000');
+              html += '<div style="text-align:center;margin-bottom:12px"><img src="' + p.photo + '" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid var(--yellow-light);cursor:zoom-in" onclick="openPhotoLightbox(\'' + bigUrl + '\')" alt="點擊放大"></div>';
+            }
+            html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">性別: ' + (p.gender || '未知') + ' · 最近更新: ' + (p.date || '') + ' · 記錄者: ' + esc(p.submitter) + '</div>';
+            if (p.notes && p.notes.length > 0) {
+              const showAll = expandedNotes.has(idx);
+              const visible = showAll ? p.notes : p.notes.slice(0, 3);
+              visible.forEach(n => {
+                const metaParts = [n.date, n.submitter ? esc(n.submitter) : ''].filter(Boolean);
+                const meta = metaParts.join(' · ') + (n.session ? ' ' + sessionTagHTML(n.session) : '');
+                html += '<div class="note-item"><div style="font-size:11px;color:var(--yellow-dark);margin-bottom:3px;font-weight:500">' + meta + '</div><div style="font-size:14px;color:#444;line-height:1.5">' + esc(n.text) + '</div></div>';
+              });
+              if (p.notes.length > 3) {
+                if (!showAll) {
+                  html += '<button onclick="toggleNotes(' + idx + ')" style="width:100%;padding:8px;background:none;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--muted);cursor:pointer;margin-top:4px">展開全部 ' + p.notes.length + ' 筆 ▼</button>';
+                } else {
+                  html += '<button onclick="toggleNotes(' + idx + ')" style="width:100%;padding:8px;background:none;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--muted);cursor:pointer;margin-top:4px">收起 ▲</button>';
+                }
+              }
+            } else html += '<div style="color:#CCC;font-size:13px">尚無近況紀錄</div>';
+            if (isAdmin) {
+              html += '<button onclick="event.stopPropagation();openEditPerson(' + idx + ')" style="width:100%;margin-top:10px;padding:10px;background:none;border:1.5px solid var(--teal);border-radius:10px;color:var(--teal);font-size:13px;font-weight:700;cursor:pointer">✏️ 編輯資料</button>';
+            }
+            html += '</div>';
+          }
+          html += '</div>';
+        });
+      }
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    function doSearch() {
+      const kw = document.getElementById('searchInput').value.trim();
+      if (!kw) { showToast('請輸入關鍵字'); return; }
+      document.getElementById('searchInput').blur();
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(d) { hideLoading(); searchResults = d; expandedId = null; renderSearchTab(document.getElementById('mainContent')); })
+        .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + e.message); })
+        .searchData(kw);
+    }
+    function toggleExpand(idx) {
+      const wasOpen = expandedId === idx;
+      expandedId = wasOpen ? null : idx;
+      if (wasOpen) expandedNotes.delete(idx);
+      renderSearchTab(document.getElementById('mainContent'));
+    }
+
+    // === 編輯單一成員資料（admin）===
+    let _editPersonIdx = -1;
+    let _editPersonOrigName = '';
+    function openEditPerson(idx) {
+      if (!isAdmin || !adminToken) { showToast('請先登入 Admin'); return; }
+      const p = searchResults[idx];
+      if (!p) return;
+      _editPersonIdx = idx;
+      _editPersonOrigName = p.name || '';
+      let modal = document.getElementById('editPersonModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'editPersonModal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:flex-end;justify-content:center';
+        modal.onclick = function(e){ if (e.target === modal) modal.style.display = 'none'; };
+        document.body.appendChild(modal);
+      }
+      const fld = function(id, label, val, ph) {
+        return '<div style="margin-bottom:10px"><div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px">' + label + '</div><input type="text" class="input" id="' + id + '" value="' + esc(val || '') + '" placeholder="' + (ph||'') + '" style="margin-bottom:0"></div>';
+      };
+      let inner = '<div style="background:#FDFCF9;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:540px;box-sizing:border-box;max-height:88vh;overflow-y:auto">';
+      inner += '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>';
+      inner += '<div style="font-size:16px;font-weight:800;margin-bottom:14px">編輯成員資料</div>';
+      inner += fld('editName', '名字', p.name, '正確名字');
+      inner += fld('editYt', 'YT 帳號', p.ytId, '可留空');
+      inner += '<div style="margin-bottom:10px"><div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px">性別</div><div style="display:flex;gap:8px">'
+        + '<button type="button" id="editGenderM" onclick="setEditGender(\'男\')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#FFF;cursor:pointer;font-weight:600">男</button>'
+        + '<button type="button" id="editGenderF" onclick="setEditGender(\'女\')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#FFF;cursor:pointer;font-weight:600">女</button>'
+        + '<button type="button" id="editGenderN" onclick="setEditGender(\'\')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#FFF;cursor:pointer;font-weight:600;color:var(--muted)">未知</button>'
+        + '</div><input type="hidden" id="editGender" value="' + esc(p.gender || '') + '"></div>';
+      inner += '<div class="grid-2">' + fld('editCountry', '國家', p.country, '國家') + fld('editCity', '城市', p.city, '城市') + '</div>';
+      inner += '<div style="font-size:11px;color:var(--muted);margin:6px 0 14px">會更新這個人的所有紀錄；留空代表清除該欄</div>';
+      inner += '<div style="display:flex;gap:10px"><button onclick="document.getElementById(\'editPersonModal\').style.display=\'none\'" style="flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:#FFF;font-size:15px;font-weight:700;cursor:pointer">取消</button>'
+        + '<button class="btn-primary" style="flex:2" onclick="savePersonEdit()">儲存</button></div>';
+      inner += '</div>';
+      modal.innerHTML = inner;
+      modal.style.display = 'flex';
+      setEditGender(p.gender || '');
+    }
+
+    function setEditGender(g) {
+      const gh = document.getElementById('editGender'); if (gh) gh.value = g;
+      [['editGenderM','男'],['editGenderF','女'],['editGenderN','']].forEach(function(pair){
+        const b = document.getElementById(pair[0]); if (!b) return;
+        const on = pair[1] === g;
+        b.style.border = '1.5px solid ' + (on ? 'var(--teal)' : 'var(--border)');
+        b.style.background = on ? 'var(--teal)' : '#FFF';
+        b.style.color = on ? '#FFF' : (pair[1]==='' ? 'var(--muted)' : 'var(--black)');
+      });
+    }
+
+    function savePersonEdit() {
+      const idx = _editPersonIdx;
+      const get = function(id){ const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+      const fields = { name: get('editName'), ytId: get('editYt'), gender: get('editGender'), country: get('editCountry'), city: get('editCity') };
+      if (!fields.name) { showToast('名字不能空白'); return; }
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(r){
+          hideLoading();
+          const modal = document.getElementById('editPersonModal'); if (modal) modal.style.display = 'none';
+          if (r && r.success) {
+            const p = searchResults[idx];
+            if (p) { p.name = fields.name; p.ytId = fields.ytId; p.gender = fields.gender; p.country = fields.country; p.city = fields.city; }
+            showToast('已更新（' + (r.updated || 0) + ' 筆紀錄）');
+            renderSearchTab(document.getElementById('mainContent'));
+          } else { showToast((r && r.error) || '更新失敗'); }
+        })
+        .withFailureHandler(function(e){ hideLoading(); showToast('錯誤: ' + (e.message||e)); })
+        .updatePersonInfo(_editPersonOrigName, fields, adminToken);
+    }
+
+    // === Gathering Tab ===
+    let gatherSession = '';
+    let gatherStaffTouched = false; // 使用者是否手動改過服事夥伴人數
+    function renderGatheringTab(el) {
+      let html = '<div class="anim-fade">';
+      html += '<div class="section-title">聚會人數紀錄</div>';
+      html += '<div class="section-sub">記錄每場一起聊一下的出席人數</div>';
+      html += '<div class="card">';
+      html += '<input type="date" class="input" id="gatherDate" value="' + new Date().toISOString().slice(0, 10) + '" style="margin-bottom:8px" onchange="gatherAutoFillStaff()">';
+      html += '<div class="session-pills" id="gatherSessionPills"></div>';
+      html += '<div class="grid-2"><input type="number" class="input" id="gatherCount" placeholder="出席人數 *"><input type="number" class="input" id="gatherStaffCount" placeholder="服事夥伴人數" oninput="gatherStaffTouched=true"></div>';
+      html += '<div style="font-size:11px;color:var(--muted);margin:-4px 0 8px;padding-left:2px">服事夥伴人數會依排班自動帶入，可手動修改</div>';
+      html += '<input class="input" id="gatherNote" placeholder="備註" style="margin-bottom:4px">';
+      html += '<button class="btn-primary" style="padding:12px;font-size:15px;margin-top:4px" onclick="submitGathering()">新增紀錄</button>';
+      html += '</div>';
+      if (gatherings.length > 0) {
+        const grouped = {};
+        gatherings.forEach(g => { if (!grouped[g.date]) grouped[g.date] = []; grouped[g.date].push(g); });
+        Object.keys(grouped).sort().reverse().forEach(date => {
+          const items = grouped[date].sort((a, b) => a.session.localeCompare(b.session));
+          const total = items.reduce((s, g) => s + g.count, 0);
+          html += '<div class="anim-slide" style="margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px">' + date + '</div>';
+          html += '<div class="card" style="padding:0;overflow:hidden;margin-bottom:0">';
+          items.forEach((g, gi) => {
+            html += '<div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center;' + (gi > 0 ? 'border-top:1px solid var(--border-light)' : '') + '">';
+            html += '<div style="display:flex;align-items:center;gap:8px">' + sessionTagHTML(g.session);
+            if (g.note) html += '<span style="font-size:12px;color:var(--muted)">' + esc(g.note) + '</span>';
+            const staffTag = (g.staffCount || g.staffCount === 0) ? '<div style="font-size:11px;color:var(--muted);margin-top:1px">服事 ' + g.staffCount + '</div>' : '';
+            html += '</div><div style="text-align:right"><span style="font-size:16px;font-weight:700">' + g.count + '</span>' + staffTag + '</div></div>';
+          });
+          html += '<div style="padding:8px 14px;background:#FAFAF7;display:flex;justify-content:space-between;border-top:1px solid var(--border-light)"><span style="font-size:12px;color:var(--muted);font-weight:500">合計</span><span style="font-size:14px;font-weight:700;color:var(--teal)">' + total + '</span></div>';
+          html += '</div></div>';
+        });
+      }
+      html += '</div>';
+      el.innerHTML = html;
+      renderGatherSessionPills();
+      if (gatherings.length === 0) loadGatherings();
+    }
+
+    function renderGatherSessionPills() {
+      const el = document.getElementById('gatherSessionPills');
+      if (!el) return;
+      el.innerHTML = ['9:30', '11:30', '2:00'].map(s => {
+        const cls = gatherSession === s ? ' active-' + getSessionClass(s) : '';
+        return '<button class="session-pill' + cls + '" onclick="setGatherSession(\'' + s + '\')">' + s + '</button>';
+      }).join('');
+    }
+    function setGatherSession(s) { gatherSession = s; renderGatherSessionPills(); gatherAutoFillStaff(); }
+
+    // 依日期+場次從排班自動帶入服事夥伴人數（使用者改過就不覆蓋）
+    function gatherAutoFillStaff() {
+      const dateEl = document.getElementById('gatherDate');
+      const staffEl = document.getElementById('gatherStaffCount');
+      if (!dateEl || !staffEl || !gatherSession || !dateEl.value) return;
+      if (gatherStaffTouched) return;
+      google.script.run
+        .withSuccessHandler(function(n) {
+          if (gatherStaffTouched) return; // 等待期間使用者若手動輸入則不蓋
+          const el = document.getElementById('gatherStaffCount');
+          if (el && (n || n === 0)) el.value = n;
+        })
+        .withFailureHandler(function() {})
+        .getServingCountForSlot(dateEl.value, gatherSession);
+    }
+    function loadGatherings() {
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(d) { hideLoading(); gatherings = d; renderGatheringTab(document.getElementById('mainContent')); })
+        .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + e.message); })
+        .getGatherings(adminToken);
+    }
+    function submitGathering() {
+      const date = document.getElementById('gatherDate').value;
+      const count = document.getElementById('gatherCount').value;
+      const note = document.getElementById('gatherNote').value;
+      const staffEl = document.getElementById('gatherStaffCount');
+      const staffCount = staffEl && staffEl.value !== '' ? parseInt(staffEl.value) : '';
+      if (!gatherSession) { showToast('請選擇場次'); return; }
+      if (!count) { showToast('請填寫出席人數'); return; }
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function() {
+          hideLoading(); showToast('已新增聚會紀錄');
+          gatherings.unshift({ date, session: gatherSession, count: parseInt(count), note, staffCount: staffCount === '' ? null : staffCount });
+          gatherSession = ''; gatherStaffTouched = false;
+          renderGatheringTab(document.getElementById('mainContent'));
+        })
+        .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + e.message); })
+        .addGatheringRecord({ date, session: gatherSession, count: parseInt(count), note, staffCount: staffCount }, adminToken);
+    }
+
+    // === Dashboard Tab ===
+    function renderDashboardTab(el) {
+      if (!dashboardData) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">載入中...</div>'; loadDashboard(); return; }
+      try {
+        const d = dashboardData;
+        const sf = dashSessionFilter;
+        const fp = sf === 'all' ? d.people : d.people.filter(p => p.session === sf);
+
+        // 時間軸過濾：dashRangeMonths=0 代表「全部」
+        const rangeMs = dashRangeMonths > 0 ? dashRangeMonths * 30 * 86400000 : 0;
+        const rangeCutoff = rangeMs > 0 ? new Date(Date.now() - rangeMs).toISOString().slice(0, 10) : '0000-00-00';
+        const useMonthly = dashRangeMonths === 0 || dashRangeMonths > 6;
+
+        // 聚會紀錄依時間軸過濾
+        const rangeGatherings = rangeMs > 0 ? d.gatherings.filter(g => g.date >= rangeCutoff) : d.gatherings;
+        const fg = sf === 'all' ? rangeGatherings : rangeGatherings.filter(g => g.session === sf);
+
+        const uniqueCountries = [...new Set(fp.map(p => p.country).filter(Boolean))];
+        const genderCounts = {};
+        const countryCounts = {};
+        fp.forEach(p => {
+          const g = p.gender || '未知'; genderCounts[g] = (genderCounts[g] || 0) + 1;
+          const c = p.country || '其他'; countryCounts[c] = (countryCounts[c] || 0) + 1;
+        });
+        const sortedCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]);
+        const sessions = ['9:30', '11:30', '2:00'];
+
+        let html = '<div class="anim-fade">';
+        html += '<div class="section-title">家人總覽</div>';
+        html += '<div class="section-sub">了解聚會的整體樣貌</div>';
+
+        // 場次 filter pills
+        html += '<div style="display:flex;gap:6px;margin-bottom:18px">';
+        [{key:'all',label:'全部'},{key:'9:30',label:'9:30'},{key:'11:30',label:'11:30'},{key:'2:00',label:'2:00'}].forEach(f => {
+          const active = sf === f.key;
+          let bg = 'var(--white)', color = 'var(--muted)', border = '1.5px solid var(--border)';
+          if (active) {
+            border = 'none';
+            if (f.key === 'all' || f.key === '9:30') { bg = 'var(--yellow)'; color = 'var(--black)'; }
+            else if (f.key === '11:30') { bg = 'var(--steel)'; color = 'var(--white)'; }
+            else { bg = 'var(--teal)'; color = 'var(--white)'; }
+          }
+          html += '<button onclick="setDashFilter(\'' + f.key + '\')" style="flex:1;padding:9px 0;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:' + bg + ';color:' + color + ';border:' + border + '">' + f.label + '</button>';
+        });
+        html += '</div>';
+
+        // KPI
+        const oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+        const thisWeekNew = fp.filter(p => p.firstDate && p.firstDate >= oneWeekAgo).length;
+        html += '<div class="kpi-grid">';
+        [{l:'認識人數',v:fp.length},{l:'來自國家',v:uniqueCountries.length},{l:'本週新認識的人',v:thisWeekNew}].forEach(k => {
+          html += '<div class="kpi-card"><div class="kpi-value">' + k.v + '</div><div class="kpi-label">' + k.l + '</div></div>';
+        });
+        html += '</div>';
+
+        // 認識的面孔（固定 12 週，不受時間軸影響）
+        const cutoff12 = new Date(Date.now() - 84 * 86400000).toISOString().slice(0, 10);
+        const facesShown = fp.filter(p => p.photo && p.date && p.date >= cutoff12).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        html += '<div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:10px">認識的面孔 <span style="font-weight:400;color:var(--muted);font-size:12px">(最近 12 週・' + facesShown.length + ' 位)</span></div><div class="mosaic">';
+        facesShown.forEach(p => { html += '<div title="' + esc(p.name) + '">' + avatarHTML(p.photo, p.name, p.gender, 40) + '</div>'; });
+        if (facesShown.length === 0) html += '<div style="color:var(--muted);font-size:13px">尚無照片資料</div>';
+        html += '</div></div>';
+
+        // 時間軸選擇器（共用，控制兩張圖）
+        html += '<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:10px">';
+        html += '<span style="font-size:12px;color:var(--muted)">時間範圍</span>';
+        html += '<select class="range-select" onchange="setDashRange(this.value)">';
+        [{v:1,l:'1 個月'},{v:3,l:'3 個月'},{v:6,l:'6 個月'},{v:12,l:'12 個月'},{v:0,l:'全部'}].forEach(r => {
+          html += '<option value="' + r.v + '"' + (dashRangeMonths === r.v ? ' selected' : '') + '>' + r.l + '</option>';
+        });
+        html += '</select></div>';
+
+        // 聊一下出席人數趨勢
+        const attendTitle = (sf === 'all' ? '聊一下出席人數' : '聊一下出席人數 (' + sf + ')') + (useMonthly ? '（月）' : '（週）');
+        html += '<div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:4px">' + attendTitle + '</div>';
+        if (fg.length === 0) {
+          html += '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">這段期間沒有聚會紀錄</div>';
+        } else if (sf === 'all') {
+          html += '<div style="display:flex;gap:12px;margin-bottom:12px">';
+          sessions.forEach(s => { html += '<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)"><div style="width:10px;height:10px;border-radius:2px;background:' + (s==='9:30'?'var(--yellow)':s==='11:30'?'var(--steel)':'var(--teal)') + '"></div>' + s + '</div>'; });
+          html += '</div>';
+          let stacked;
+          if (useMonthly) {
+            const monthMap = {};
+            fg.forEach(g => {
+              const month = g.date.slice(0, 7);
+              if (!monthMap[month]) monthMap[month] = { date: month, total: 0, '9:30': 0, '11:30': 0, '2:00': 0 };
+              monthMap[month].total += g.count;
+              if (sessions.includes(g.session)) monthMap[month][g.session] += g.count;
+            });
+            stacked = Object.keys(monthMap).sort().map(m => monthMap[m]);
+          } else {
+            const allDates = [...new Set(fg.map(g => g.date))].sort();
+            stacked = allDates.map(date => {
+              const obj = { date, total: 0 };
+              sessions.forEach(s => { const g = fg.find(g2 => g2.date === date && g2.session === s); obj[s] = g ? g.count : 0; obj.total += obj[s]; });
+              return obj;
+            });
+          }
+          const maxS = Math.max(...stacked.map(x => x.total), 1);
+          html += '<div class="bar-container" style="height:120px">';
+          stacked.forEach(x => {
+            html += '<div class="bar-col"><span class="bar-value">' + x.total + '</span><div style="width:100%;max-width:52px;display:flex;flex-direction:column">';
+            [...sessions].reverse().forEach(s => {
+              const h = (x[s] / maxS) * 96;
+              const bg = s === '9:30' ? 'var(--yellow)' : s === '11:30' ? 'var(--steel)' : 'var(--teal)';
+              const br = s === '2:00' ? '4px 4px 0 0' : '0';
+              html += '<div style="width:100%;height:' + h + 'px;background:' + bg + ';border-radius:' + br + '"></div>';
+            });
+            html += '</div><span class="bar-label">' + x.date.slice(useMonthly ? 0 : 5) + '</span></div>';
+          });
+          html += '</div>';
+        } else {
+          let trend;
+          if (useMonthly) {
+            const monthMap = {};
+            fg.forEach(g => {
+              const month = g.date.slice(0, 7);
+              monthMap[month] = (monthMap[month] || 0) + g.count;
+            });
+            trend = Object.keys(monthMap).sort().map(m => ({ date: m, count: monthMap[m] }));
+          } else {
+            const allDates = [...new Set(fg.map(g => g.date))].sort();
+            trend = allDates.map(date => { const g = fg.find(g2 => g2.date === date); return { date, count: g ? g.count : 0 }; });
+          }
+          const maxT = Math.max(...trend.map(x => x.count), 1);
+          const bg = sf === '9:30' ? 'var(--yellow)' : sf === '11:30' ? 'var(--steel)' : 'var(--teal)';
+          html += '<div class="bar-container" style="height:100px">';
+          trend.forEach(x => {
+            html += '<div class="bar-col"><span class="bar-value">' + x.count + '</span><div style="width:100%;max-width:52px;border-radius:6px 6px 0 0;background:' + bg + ';height:' + ((x.count / maxT) * 80) + 'px"></div><span class="bar-label">' + x.date.slice(useMonthly ? 0 : 5) + '</span></div>';
+          });
+          html += '</div>';
+        }
+        html += '</div>';
+
+        // 新認識的人趨勢（共用時間軸）
+        const newTitle = '新認識的人' + (sf !== 'all' ? ' (' + sf + ')' : '') + (useMonthly ? '（月）' : '（週）');
+        html += '<div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:14px">' + newTitle + '</div>';
+        const newGroups = {};
+        fp.forEach(p => {
+          if (!p.firstDate || p.firstDate < rangeCutoff) return;
+          let key;
+          if (useMonthly) {
+            key = p.firstDate.slice(0, 7);
+          } else {
+            const dt = new Date(p.firstDate);
+            if (isNaN(dt)) return;
+            const day = dt.getDay();
+            key = new Date(dt.getTime() - day * 86400000).toISOString().slice(0, 10);
+          }
+          newGroups[key] = (newGroups[key] || 0) + 1;
+        });
+        const newDates = Object.entries(newGroups).sort((a, b) => a[0].localeCompare(b[0]));
+        const maxN = Math.max(...newDates.map(x => x[1]), 1);
+        if (newDates.length > 0) {
+          html += '<div class="bar-container" style="height:80px">';
+          newDates.forEach(([date, count]) => {
+            html += '<div class="bar-col"><span class="bar-value">' + count + '</span><div style="width:100%;max-width:52px;border-radius:6px 6px 0 0;background:var(--steel);height:' + ((count / maxN) * 60) + 'px"></div><span class="bar-label">' + date.slice(useMonthly ? 0 : 5) + '</span></div>';
+          });
+          html += '</div>';
+        } else html += '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">這段期間沒有新認識的人</div>';
+        html += '</div>';
+
+        // 性別 + 國家
+        html += '<div class="grid-2-cards">';
+        html += '<div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:12px">性別比例</div>';
+        Object.entries(genderCounts).forEach(([g, c]) => {
+          const pct = fp.length > 0 ? (c / fp.length * 100) : 0;
+          const bg = g === '女' ? '#D4A0BC' : g === '男' ? 'var(--steel)' : '#CCC';
+          html += '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#666;margin-bottom:3px"><span>' + g + '</span><span style="font-weight:700">' + c + '</span></div>';
+          html += '<div class="progress-track" style="height:6px"><div class="progress-fill" style="width:' + pct + '%;background:' + bg + '"></div></div></div>';
+        });
+        html += '</div>';
+        html += '<div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:12px">國家分佈</div>';
+        sortedCountries.slice(0, 5).forEach(([country, count]) => {
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;font-size:13px"><span style="color:#555">' + getFlag(country) + ' ' + esc(country) + '</span><span style="background:var(--yellow-light);padding:2px 10px;border-radius:12px;font-weight:700;font-size:12px;color:var(--yellow-dark)">' + count + '</span></div>';
+        });
+        html += '</div></div>';
+
+        // 最近的故事
+        const sortedStories = [...fp].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        _dashStories = sortedStories.slice(0, 8);
+        html += '<div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:12px">最近的故事</div>';
+        _dashStories.forEach((p, i) => {
+          html += '<div style="display:flex;gap:10px;padding:9px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0.04);' + (i < _dashStories.length - 1 ? 'border-bottom:1px solid var(--border-light)' : '') + '" onclick="showPersonModal(' + i + ')">';
+          html += avatarHTML(p.photo, p.name, p.gender, 36);
+          html += '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">' + esc(p.name || '(無名)') + ' ' + sessionTagHTML(p.session) + '<span style="font-weight:400;color:var(--muted);font-size:11px;margin-left:auto">' + (p.date || '').slice(5) + '</span></div>';
+          if (p.notes && p.notes[0]) html += '<div style="font-size:12px;color:#888;margin-top:2px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.notes[0].text) + '</div>';
+          html += '</div><div style="color:var(--border);font-size:11px;align-self:center;flex-shrink:0">▶</div></div>';
+        });
+        html += '</div>';
+
+        html += '</div>';
+        el.innerHTML = html;
+      } catch (e) {
+        el.innerHTML = '<div style="padding:20px;color:#C00;font-size:13px">渲染錯誤: ' + esc(e.message) + '</div>';
+      }
+    }
+
+    function setDashFilter(f) { dashSessionFilter = f; renderDashboardTab(document.getElementById('mainContent')); }
+    function setDashRange(v) { dashRangeMonths = parseInt(v); renderDashboardTab(document.getElementById('mainContent')); }
+
+    function loadDashboard() {
+      showLoading();
+      const timer = setTimeout(() => { hideLoading(); showToast('載入逾時'); }, 30000);
+      google.script.run
+        .withSuccessHandler(function(d) { clearTimeout(timer); hideLoading(); dashboardData = d; renderDashboardTab(document.getElementById('mainContent')); })
+        .withFailureHandler(function(e) { clearTimeout(timer); hideLoading(); showToast('錯誤: ' + e.message); document.getElementById('mainContent').innerHTML = '<div style="padding:20px;color:#C00">載入失敗: ' + esc(e.message) + '</div>'; })
+        .getDashboardStats(adminToken);
+    }
+
+    // ===== 名字 Autocomplete =====
+    let _acTimer = null;
+    let _acIdx = -1; // 哪個 person slot
+
+    function nameAC(input, idx) {
+      // 同步 state（避免 detached blur 覆寫先前 acSelect 設的值）
+      const field = (input.id || '').indexOf('ytInput') === 0 ? 'ytId' : 'name';
+      recordPersons[idx][field] = input.value;
+
+      _acIdx = idx;
+      const val = input.value;
+      clearTimeout(_acTimer);
+      if (val.length < 2) { closeAC(); return; }
+      _acTimer = setTimeout(function() {
+        google.script.run
+          .withSuccessHandler(function(items) { showACDrop(input, items, idx); })
+          .withFailureHandler(function() { closeAC(); })
+          .getPersonSuggestions(val);
+      }, 150);
+    }
+
+    function showACDrop(input, items, idx) {
+      const drop = document.getElementById('acDrop');
+      if (!items || items.length === 0) { drop.style.display = 'none'; return; }
+      const rect = input.getBoundingClientRect();
+      drop.style.left = rect.left + 'px';
+      drop.style.top = (rect.bottom + 4) + 'px';
+      drop.style.width = Math.max(rect.width, 260) + 'px';
+      drop.style.display = 'block';
+      drop.innerHTML = items.map(function(p, i) {
+        const avatar = p.photo
+          ? '<img src="' + esc(p.photo) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(255,255,255,0.15)">'
+          : '<div style="width:36px;height:36px;border-radius:50%;background:' + (p.gender==='女'?'#4A2A40':'#2A3A45') + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:' + (p.gender==='女'?'#D9A0C0':'#8AAFC0') + ';flex-shrink:0">' + esc((p.name||'?')[0]) + '</div>';
+        const loc = [p.country, p.city].filter(Boolean).join(' · ');
+        return '<div onmousedown="acSelect(' + i + ')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06)" onmouseover="this.style.background=\'rgba(255,255,255,0.07)\'" onmouseout="this.style.background=\'\'">'+
+          avatar +
+          '<div style="min-width:0"><div style="color:#FFF;font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(p.name) + '</div>' +
+          '<div style="color:rgba(255,255,255,0.45);font-size:11px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(loc || p.ytId || '') + '</div></div>' +
+          '</div>';
+      }).join('');
+      // store items for selection
+      drop._items = items;
+      drop._personIdx = idx;
+    }
+
+    function acSelect(itemIdx) {
+      const drop = document.getElementById('acDrop');
+      const items = drop._items;
+      const personIdx = drop._personIdx;
+      if (!items || !items[itemIdx]) return;
+      const p = items[itemIdx];
+      recordPersons[personIdx].name = p.name;
+      if (p.ytId) recordPersons[personIdx].ytId = p.ytId;
+      if (p.country) recordPersons[personIdx].country = p.country;
+      if (p.city) recordPersons[personIdx].city = p.city;
+      closeAC();
+      renderRecordTab(document.getElementById('mainContent'));
+    }
+
+    function closeAC() {
+      const drop = document.getElementById('acDrop');
+      if (drop) drop.style.display = 'none';
+    }
+
+    function closeACDelayed() { setTimeout(closeAC, 180); }
+
+    // ===== 送出後合併建議 Bottom Sheet =====
+    let _mergeSuggestions = [];
+    let _mergeSugIdx = 0;
+
+    function showMergeSuggestions(suggestions) {
+      _mergeSuggestions = suggestions;
+      _mergeSugIdx = 0;
+      showToast('已送出！發現 ' + suggestions.length + ' 組可能重複');
+      setTimeout(function() { _renderMergeSheet(); }, 800);
+    }
+
+    function _renderMergeSheet() {
+      let modal = document.getElementById('mergeModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'mergeModal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:flex-end;justify-content:center';
+        modal.onclick = function(e) { if (e.target === modal) closeMergeModal(); };
+        document.body.appendChild(modal);
+      }
+
+      if (_mergeSugIdx >= _mergeSuggestions.length) { closeMergeModal(); return; }
+      const s = _mergeSuggestions[_mergeSugIdx];
+      const remaining = _mergeSuggestions.length - _mergeSugIdx;
+      const c = s.candidate;
+
+      let html = '<div style="background:var(--white);border-radius:24px 24px 0 0;width:100%;max-width:540px;padding:20px 16px calc(24px + var(--safe-bottom));animation:slideUp 0.25s ease-out;cursor:default">';
+      html += '<div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px"></div>';
+
+      // 標題
+      html += '<div style="font-size:18px;font-weight:900;margin-bottom:4px">這是同一個人嗎？</div>';
+      if (remaining > 1) html += '<div style="font-size:12px;color:var(--muted);margin-bottom:16px">還有 ' + (remaining - 1) + ' 組待確認</div>';
+      else html += '<div style="margin-bottom:16px"></div>';
+
+      // 兩個人並排
+      html += '<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin-bottom:20px">';
+
+      // 剛填的
+      html += '<div style="background:#FAFAF7;border-radius:14px;padding:14px;text-align:center">';
+      html += '<div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:8px;letter-spacing:0.5px">剛填的</div>';
+      html += '<div style="width:48px;height:48px;border-radius:50%;background:#E6EEF3;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--steel);margin:0 auto 8px">' + esc((s.newName||'?')[0]) + '</div>';
+      html += '<div style="font-size:15px;font-weight:900;color:var(--black)">' + esc(s.newName) + '</div>';
+      html += '</div>';
+
+      // 箭頭
+      html += '<div style="font-size:20px;color:var(--muted)">≈</div>';
+
+      // 系統內
+      html += '<div style="background:#FAFAF7;border-radius:14px;padding:14px;text-align:center">';
+      html += '<div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:8px;letter-spacing:0.5px">系統內</div>';
+      if (c.photo) {
+        html += '<img src="' + esc(c.photo) + '" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--border-light);margin:0 auto 8px;display:block">';
+      } else {
+        html += '<div style="width:48px;height:48px;border-radius:50%;background:#E6EEF3;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--steel);margin:0 auto 8px">' + esc((c.name||'?')[0]) + '</div>';
+      }
+      html += '<div style="font-size:15px;font-weight:900;color:var(--black)">' + esc(c.name) + '</div>';
+      if (c.country) html += '<div style="font-size:11px;color:var(--muted);margin-top:3px">' + getFlag(c.country) + ' ' + esc(c.country) + (c.city ? ' · ' + esc(c.city) : '') + '</div>';
+      if (c.notesCount) html += '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + c.notesCount + ' 筆紀錄</div>';
+      html += '</div>';
+      html += '</div>';
+
+      // 按鈕
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+      html += '<button class="btn-primary" style="grid-column:1/-1" onclick="mergeSugDecide(true)">✓ 是同一人 — 合併</button>';
+      html += '<button style="padding:14px;border-radius:14px;border:1.5px solid var(--border);background:var(--white);font-size:15px;font-weight:700;cursor:pointer;min-height:52px" onclick="mergeSugDecide(false)">✗ 不是同一人</button>';
+      html += '<button style="padding:14px;border-radius:14px;border:1.5px solid var(--border);background:var(--white);font-size:15px;font-weight:700;cursor:pointer;min-height:52px;color:var(--muted)" onclick="closeMergeModal()">略過全部</button>';
+      html += '</div>';
+      html += '</div>';
+
+      modal.innerHTML = html;
+      modal.style.display = 'flex';
+    }
+
+    function mergeSugDecide(doMerge) {
+      const s = _mergeSuggestions[_mergeSugIdx];
+      if (doMerge) {
+        showLoading();
+        google.script.run
+          .withSuccessHandler(function() {
+            hideLoading();
+            showToast('✓ 已合併：' + s.candidate.name);
+            _mergeSugIdx++;
+            _renderMergeSheet();
+          })
+          .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + e.message); })
+          .confirmMerge([s.newName, s.candidate.name], s.candidate.name, null);
+      } else {
+        _mergeSugIdx++;
+        _renderMergeSheet();
+      }
+    }
+
+    function closeMergeModal() {
+      const modal = document.getElementById('mergeModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    // ===== 去重審核 Tab =====
+    function _initDedupeChecked(g) {
+      if (!dedupeChecked || dedupeChecked.length !== g.members.length) {
+        dedupeChecked = g.members.map(function() { return true; });
+      }
+    }
+
+    function toggleDedupeCheck(mi) {
+      dedupeChecked[mi] = !dedupeChecked[mi];
+      // 確保至少 2 個勾選，否則不讓取消
+      const checkedCount = dedupeChecked.filter(Boolean).length;
+      if (checkedCount < 1) { dedupeChecked[mi] = true; }
+      renderDedupeTab(document.getElementById('mainContent'));
+    }
+
+    let _dedupeForceRescan = false;
+    function renderDedupeTab(el) {
+      if (!dedupeLoaded) {
+        el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--muted)">' + (_dedupeForceRescan ? '重新掃描中（保留「不是同一人」決策）...' : '載入重複組別中...') + '</div>';
+        showLoading();
+        const force = _dedupeForceRescan;
+        _dedupeForceRescan = false;
+        google.script.run
+          .withSuccessHandler(function(r) {
+            hideLoading();
+            dedupeGroups = r.groups;
+            dedupeTotal = r.total;
+            dedupeIdx = 0;
+            dedupeChecked = [];
+            dedupeLoaded = true;
+            renderDedupeTab(document.getElementById('mainContent'));
+          })
+          .withFailureHandler(function(e) {
+            hideLoading();
+            showToast('載入失敗: ' + e.message);
+            el.innerHTML = '<div style="padding:20px;color:#C00;font-size:13px">載入失敗: ' + esc(e.message) + '</div>';
+          })
+          .getDuplicateGroups(force);
+        return;
+      }
+
+      if (dedupeGroups.length === 0) {
+        el.innerHTML = '<div style="padding:40px 16px;text-align:center">' +
+          '<div style="font-size:48px;margin-bottom:16px">✅</div>' +
+          '<div style="font-size:20px;font-weight:900;margin-bottom:8px">沒有待審核組別</div>' +
+          '<div style="color:var(--muted);font-size:14px">所有重複都已處理完畢</div>' +
+          '<button class="btn-primary" style="margin-top:24px;max-width:200px" onclick="dedupeReload()">重新掃描</button>' +
+          '</div>';
+        return;
+      }
+
+      const g = dedupeGroups[dedupeIdx];
+      _initDedupeChecked(g);
+      const progress = (dedupeIdx + 1) + ' / ' + dedupeGroups.length;
+      const checkedNames = g.members.filter(function(m, i) { return dedupeChecked[i]; }).map(function(m) { return m.name; });
+      const defaultCanon = checkedNames.includes(g.canonicalName) ? g.canonicalName : checkedNames[0] || g.members[0].name;
+
+      let html = '<div style="padding-bottom:8px">';
+      // 進度列
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">';
+      html += '<div style="font-size:22px;font-weight:900">去重審核</div>';
+      html += '<div style="font-size:14px;color:var(--muted);font-weight:700">' + progress + '</div>';
+      html += '</div>';
+      html += '<div style="height:4px;background:var(--border-light);border-radius:2px;margin-bottom:16px"><div style="height:100%;background:var(--yellow);border-radius:2px;width:' + Math.round((dedupeIdx / dedupeGroups.length) * 100) + '%"></div></div>';
+
+      html += '<div style="font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600">點卡片右上角可取消勾選，只合併打勾的：</div>';
+
+      // 成員卡片（縱向疊列）
+      html += '<div style="display:flex;flex-direction:column;gap:10px">';
+      g.members.forEach(function(m, mi) {
+        const checked = dedupeChecked[mi];
+        const cardOpacity = checked ? '1' : '0.45';
+        const cardBorder = checked ? '2px solid var(--yellow)' : '1px solid var(--border)';
+        const cardBg = checked ? '#FFFDF0' : 'var(--white)';
+        const checkIcon = checked ? '✓' : '—';
+        const checkBg = checked ? 'var(--yellow)' : 'var(--border-light)';
+        const checkColor = checked ? 'var(--black)' : 'var(--muted)';
+
+        html += '<div style="background:' + cardBg + ';border-radius:16px;border:' + cardBorder + ';opacity:' + cardOpacity + ';transition:opacity 0.2s,border 0.2s,background 0.2s;overflow:hidden">';
+
+        // 頭部列：頭像 + 名字 + 勾選按鈕
+        html += '<div style="display:flex;align-items:center;gap:12px;padding:14px 14px 10px;position:relative">';
+        if (m.photo) {
+          html += '<img src="' + esc(m.photo) + '" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--border-light);flex-shrink:0" alt="">';
+        } else {
+          const bg = m.gender === '女' ? '#F3E8EF' : '#E6EEF3';
+          const fc = m.gender === '女' ? '#9B6B8A' : '#5A7080';
+          html += '<div style="width:48px;height:48px;border-radius:50%;background:' + bg + ';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:' + fc + ';flex-shrink:0">' + esc((m.name||'?')[0]) + '</div>';
+        }
+        html += '<div style="flex:1;min-width:0">';
+        html += '<div style="font-size:16px;font-weight:900;color:var(--black)">' + esc(m.name) + '</div>';
+        if (m.ytId) html += '<div style="font-size:11px;color:var(--muted);margin-top:1px">' + esc(m.ytId) + '</div>';
+        if (m.country || m.city) {
+          html += '<div style="font-size:12px;color:var(--steel);margin-top:2px">' + getFlag(m.country) + ' ' + esc(m.country) + (m.city ? ' · ' + esc(m.city) : '') + '</div>';
+        }
+        html += '</div>';
+        html += '<button onclick="toggleDedupeCheck(' + mi + ')" style="width:32px;height:32px;border-radius:50%;border:none;background:' + checkBg + ';color:' + checkColor + ';font-size:14px;font-weight:900;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">' + checkIcon + '</button>';
+        html += '</div>';
+
+        // 紀錄數量標題
+        html += '<div style="font-size:11px;color:var(--muted);font-weight:600;padding:0 14px 6px">' + m.notesCount + ' 筆紀錄' + (m.latestDate ? '｜最新 ' + m.latestDate : '') + '</div>';
+
+        // 全部紀錄（最多顯示 8 筆，超過可再滾動）
+        if (m.allNotes.length > 0) {
+          const maxShow = 8;
+          const showNotes = m.allNotes.slice(0, maxShow);
+          html += '<div style="padding:0 14px 14px;display:flex;flex-direction:column;gap:5px">';
+          showNotes.forEach(function(n) {
+            html += '<div style="background:#FAFAF7;border-left:3px solid var(--yellow);border-radius:0 8px 8px 0;padding:7px 10px;font-size:12px">';
+            html += '<div style="color:var(--muted);font-size:10px;margin-bottom:2px">' + esc(n.date) + (n.submitter ? ' · ' + esc(n.submitter) : '') + '</div>';
+            html += '<div style="color:var(--black);line-height:1.4;word-break:break-all">' + esc(n.text) + '</div>';
+            html += '</div>';
+          });
+          if (m.allNotes.length > maxShow) {
+            html += '<div style="font-size:11px;color:var(--muted);text-align:center;padding:2px 0">還有 ' + (m.allNotes.length - maxShow) + ' 筆未顯示</div>';
+          }
+          html += '</div>';
+        } else {
+          html += '<div style="padding:0 14px 14px;font-size:12px;color:var(--muted)">（無紀錄）</div>';
+        }
+
+        html += '</div>';
+      });
+      html += '</div>';
+
+      // ── 合併後的正式資料（可快速挑現有值，也可直接打字修正）──
+      const checkedMembers = g.members.filter(function(m, i) { return dedupeChecked[i]; });
+
+      // YT / 地區的現有候選
+      var ytOptions = [];
+      var ytSeen = new Set();
+      checkedMembers.forEach(function(m) {
+        if (m.ytId && !ytSeen.has(m.ytId.toLowerCase())) { ytSeen.add(m.ytId.toLowerCase()); ytOptions.push(m.ytId); }
+      });
+      var locOptions = [];
+      var locSeen = new Set();
+      checkedMembers.forEach(function(m) {
+        var key = (m.country || '') + '|' + (m.city || '');
+        if ((m.country || m.city) && !locSeen.has(key)) {
+          locSeen.add(key);
+          locOptions.push({ country: m.country || '', city: m.city || '' });
+        }
+      });
+      var locDisplay = function(loc) { return getFlag(loc.country) + ' ' + loc.country + (loc.city ? ' · ' + loc.city : ''); };
+
+      html += '<div style="margin:16px 0 8px;padding:14px;background:#FAFAF7;border:1px solid var(--border);border-radius:14px">';
+      html += '<div style="font-size:13px;font-weight:800;margin-bottom:3px">合併後的正式資料</div>';
+      html += '<div style="font-size:11px;color:var(--muted);margin-bottom:12px">點下方現有值可快速帶入，也可直接在欄位輸入正確資料</div>';
+
+      // 名字
+      html += '<div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px">名字</div>';
+      if (checkedNames.length >= 2) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px" id="canonBtns">';
+        checkedNames.forEach(function(name) {
+          const isDefault = name === defaultCanon;
+          html += '<button type="button" onclick="selectCanon(this,\'' + esc(name) + '\')" style="padding:5px 12px;border-radius:16px;border:2px solid ' + (isDefault ? 'var(--yellow)' : 'var(--border)') + ';background:' + (isDefault ? 'var(--yellow)' : 'var(--white)') + ';font-weight:700;font-size:13px;cursor:pointer">' + esc(name) + '</button>';
+        });
+        html += '</div>';
+      }
+      html += '<input type="text" class="input" id="selectedCanon" value="' + esc(defaultCanon) + '" placeholder="正確名字" style="margin-bottom:12px">';
+
+      // YT 帳號
+      html += '<div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px">YT 帳號</div>';
+      if (ytOptions.length >= 2) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px" id="ytPicker">';
+        ytOptions.forEach(function(yt, i) {
+          var isSel = i === 0;
+          html += '<button type="button" onclick="selectYt(this,\'' + esc(yt) + '\')" style="padding:5px 12px;border-radius:16px;border:2px solid ' + (isSel ? 'var(--yellow)' : 'var(--border)') + ';background:' + (isSel ? 'var(--yellow)' : 'var(--white)') + ';font-size:13px;font-weight:600;cursor:pointer">' + esc(yt) + '</button>';
+        });
+        html += '</div>';
+      }
+      html += '<input type="text" class="input" id="selectedYtId" value="' + esc(ytOptions[0] || '') + '" placeholder="YT 帳號（可留空）" style="margin-bottom:12px">';
+
+      // 國家 / 地區
+      html += '<div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px">國家 / 地區</div>';
+      if (locOptions.length >= 2) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px" id="locPicker">';
+        locOptions.forEach(function(loc, i) {
+          var isSel = i === 0;
+          html += '<button type="button" onclick="selectLoc(this,\'' + esc(loc.country) + '\',\'' + esc(loc.city) + '\')" style="padding:5px 12px;border-radius:16px;border:2px solid ' + (isSel ? 'var(--yellow)' : 'var(--border)') + ';background:' + (isSel ? 'var(--yellow)' : 'var(--white)') + ';font-size:13px;font-weight:600;cursor:pointer">' + esc(locDisplay(loc)) + '</button>';
+        });
+        html += '</div>';
+      }
+      html += '<div class="grid-2"><input type="text" class="input" id="selectedCountry" value="' + esc(locOptions[0] ? locOptions[0].country : '') + '" placeholder="國家"><input type="text" class="input" id="selectedCity" value="' + esc(locOptions[0] ? locOptions[0].city : '') + '" placeholder="城市"></div>';
+      html += '</div>';
+
+      // 按鈕區
+      const canMerge = checkedNames.length >= 2;
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px">';
+      html += '<button class="btn-primary" style="grid-column:1/-1;opacity:' + (canMerge ? '1' : '0.4') + '" ' + (canMerge ? 'onclick="dedupeDecide(\'merge\')"' : 'disabled') + '>✓ 合併勾選的（' + checkedNames.length + ' 人）</button>';
+      html += '<button style="padding:14px;border-radius:14px;border:1.5px solid var(--border);background:var(--white);font-size:15px;font-weight:700;cursor:pointer;min-height:52px" onclick="dedupeDecide(\'not_same\')">✗ 整組不是同一人</button>';
+      html += '<button style="padding:14px;border-radius:14px;border:1.5px solid var(--border);background:var(--white);font-size:15px;font-weight:700;cursor:pointer;min-height:52px;color:var(--muted)" onclick="dedupeDecide(\'skip\')">→ 下次再說</button>';
+      html += '</div>';
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    function selectCanon(btn, name) {
+      document.getElementById('selectedCanon').value = name;
+      document.querySelectorAll('#canonBtns button').forEach(function(b) {
+        b.style.border = '2px solid var(--border)';
+        b.style.background = 'var(--white)';
+      });
+      btn.style.border = '2px solid var(--yellow)';
+      btn.style.background = 'var(--yellow)';
+    }
+
+    function selectYt(btn, yt) {
+      document.getElementById('selectedYtId').value = yt;
+      document.querySelectorAll('#ytPicker button').forEach(function(b) {
+        b.style.border = '2px solid var(--border)';
+        b.style.background = 'var(--white)';
+      });
+      btn.style.border = '2px solid var(--yellow)';
+      btn.style.background = 'var(--yellow)';
+    }
+
+    function selectLoc(btn, country, city) {
+      document.getElementById('selectedCountry').value = country;
+      document.getElementById('selectedCity').value = city;
+      document.querySelectorAll('#locPicker button').forEach(function(b) {
+        b.style.border = '2px solid var(--border)';
+        b.style.background = 'var(--white)';
+      });
+      btn.style.border = '2px solid var(--yellow)';
+      btn.style.background = 'var(--yellow)';
+    }
+
+    function dedupeDecide(decision) {
+      if (dedupeGroups.length === 0) return;
+      const g = dedupeGroups[dedupeIdx];
+      const canonEl = document.getElementById('selectedCanon');
+      const canon = canonEl ? canonEl.value : g.canonicalName;
+
+      const advance = function() {
+        dedupeChecked = [];
+        dedupeGroups.splice(dedupeIdx, 1);
+        if (dedupeIdx >= dedupeGroups.length) dedupeIdx = Math.max(0, dedupeGroups.length - 1);
+      };
+
+      if (decision === 'merge') {
+        const selectedNames = g.members.filter(function(m, i) { return dedupeChecked[i]; }).map(function(m) { return m.name; });
+        if (selectedNames.length < 2) { showToast('請至少勾選 2 人'); return; }
+        const ytEl = document.getElementById('selectedYtId');
+        const coEl = document.getElementById('selectedCountry');
+        const ciEl = document.getElementById('selectedCity');
+        const preferredFields = {
+          ytId: ytEl ? ytEl.value : '',
+          country: coEl ? coEl.value : '',
+          city: ciEl ? ciEl.value : ''
+        };
+        showLoading();
+        google.script.run
+          .withSuccessHandler(function() {
+            hideLoading();
+            showToast('✓ 已合併：' + canon);
+            advance();
+            renderDedupeTab(document.getElementById('mainContent'));
+          })
+          .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + e.message); })
+          .confirmMerge(selectedNames, canon, g.groupId, preferredFields);
+
+      } else if (decision === 'not_same') {
+        showLoading();
+        google.script.run
+          .withSuccessHandler(function() {
+            hideLoading();
+            showToast('已標記為不同人');
+            advance();
+            renderDedupeTab(document.getElementById('mainContent'));
+          })
+          .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + e.message); })
+          .decideDuplicateGroup(g.groupId, 'not_same', '');
+
+      } else if (decision === 'skip') {
+        dedupeChecked = [];
+        dedupeIdx = (dedupeIdx + 1) % dedupeGroups.length;
+        renderDedupeTab(document.getElementById('mainContent'));
+      }
+    }
+
+    function dedupeReload() {
+      _dedupeForceRescan = true;
+      dedupeLoaded = false;
+      dedupeGroups = [];
+      dedupeTotal = 0;
+      dedupeIdx = 0;
+      dedupeChecked = [];
+      renderDedupeTab(document.getElementById('mainContent'));
+    }
+
+    // === Photo Tab ===
+    function renderPhotoTab(el) {
+      if (!isAdmin) {
+        el.innerHTML = '<div class="main"><div class="card" style="text-align:center;padding:32px;color:#9A9690">請先登入 Admin 使用此功能</div></div>';
+        return;
+      }
+      const div = document.createElement('div');
+      div.className = 'main';
+      div.innerHTML = _photoTabHTML();
+      el.innerHTML = '';
+      el.appendChild(div);
+      if (photoState === 'review') setTimeout(_drawPhotoThumbnails, 0);
+    }
+
+    function _photoTabHTML() {
+      if (photoState === 'idle') return _photoIdleHTML();
+      if (photoState === 'parsing') return '<div style="text-align:center;padding:48px;color:#5A7080;font-size:15px">正在分析截圖，請稍候...<br><small style="color:#AAA;font-size:13px">（通常 5-10 秒）</small></div>';
+      if (photoState === 'review') return _photoReviewHTML();
+      if (photoState === 'submitting') return '<div style="text-align:center;padding:48px;color:#5A7080;font-size:15px">寫入照片中...</div>';
+      if (photoState === 'done') return _photoDoneHTML();
+      return '';
+    }
+
+    function _photoIdleHTML() {
+      return '<div class="card">'
+        + '<div style="font-size:16px;font-weight:700;margin-bottom:8px">上傳 Zoom 截圖</div>'
+        + '<div style="font-size:13px;color:#9A9690;margin-bottom:16px">上傳聚會的大合照截圖，AI 自動辨識每位開鏡頭的家人，配對到 Hope Nation 記錄</div>'
+        + '<label style="display:block;border:2px dashed #D4A82E;border-radius:12px;padding:32px 16px;text-align:center;cursor:pointer;background:#FDF6E0">'
+        + '<div style="font-size:28px;margin-bottom:8px">&#128247;</div>'
+        + '<div style="font-size:14px;color:#D4A82E;font-weight:700">點此選擇截圖</div>'
+        + '<div style="font-size:12px;color:#AAA;margin-top:4px">支援 JPG、PNG</div>'
+        + '<input type="file" accept="image/*" style="display:none" onchange="photoUploadFile(this)">'
+        + '</label>'
+        + '<div style="font-size:12px;color:#AAA;margin-top:12px">只處理有開鏡頭且尚未有頭像的家人；沒開鏡頭的一律略過</div>'
+        + '</div>';
+    }
+
+    function _photoDoneHTML() {
+      return '<div class="card" style="text-align:center;padding:32px">'
+        + '<div style="font-size:32px;margin-bottom:12px">&#9989;</div>'
+        + '<div style="font-size:16px;font-weight:700;margin-bottom:8px">完成！</div>'
+        + '<div style="font-size:13px;color:#9A9690;margin-bottom:20px">照片已寫入 Hope Nation</div>'
+        + '<button onclick="photoReset()" style="padding:12px 24px;background:#1D292E;border:none;border-radius:10px;font-size:14px;font-weight:700;color:#F2C94C;cursor:pointer">再上傳一張</button>'
+        + '</div>';
+    }
+
+    function photoUploadFile(input) {
+      if (!input.files || !input.files[0]) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        photoOriginalBase64 = e.target.result;
+        photoImage = new Image();
+        photoImage.src = photoOriginalBase64;
+        _resizeAndParseZoom(photoOriginalBase64);
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+
+    function _resizeAndParseZoom(base64) {
+      const img = new Image();
+      img.onload = function() {
+        const maxW = 1920;
+        const scale = img.width > maxW ? maxW / img.width : 1;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const resized = canvas.toDataURL('image/jpeg', 0.92);
+        photoState = 'parsing';
+        renderPhotoTab(document.getElementById('mainContent'));
+        google.script.run
+          .withSuccessHandler(function(parseResult) {
+            if (!parseResult.success) {
+              photoState = 'idle'; renderPhotoTab(document.getElementById('mainContent'));
+              showToast('解析失敗：' + parseResult.error); return;
+            }
+            google.script.run
+              .withSuccessHandler(function(matchResult) {
+                if (!matchResult.success) {
+                  photoState = 'idle'; renderPhotoTab(document.getElementById('mainContent'));
+                  showToast('配對失敗：' + matchResult.error); return;
+                }
+                photoMatches = matchResult.matches;
+                photoChecked = {}; photoManualMap = {};
+                google.script.run
+                  .withSuccessHandler(function(persons) {
+                    allPersonsList = persons;
+                    photoState = 'review';
+                    renderPhotoTab(document.getElementById('mainContent'));
+                  })
+                  .withFailureHandler(function() {
+                    allPersonsList = [];
+                    photoState = 'review';
+                    renderPhotoTab(document.getElementById('mainContent'));
+                  })
+                  .getAllPersonsForSearch();
+              })
+              .withFailureHandler(function(e) {
+                photoState = 'idle'; renderPhotoTab(document.getElementById('mainContent'));
+                showToast('配對失敗：' + e.message);
+              })
+              .matchZoomTiles(parseResult.tiles);
+          })
+          .withFailureHandler(function(e) {
+            photoState = 'idle'; renderPhotoTab(document.getElementById('mainContent'));
+            showToast('解析失敗：' + e.message);
+          })
+          .parseZoomScreenshot(resized);
+      };
+      img.src = base64;
+    }
+
+    function photoToggleCheck(idx) {
+      photoChecked[idx] = !photoChecked[idx];
+      renderPhotoTab(document.getElementById('mainContent'));
+    }
+
+    function photoSelectAll() {
+      photoMatches.forEach(function(m, idx) {
+        if (m.matchStatus === 'matched') photoChecked[idx] = true;
+      });
+      renderPhotoTab(document.getElementById('mainContent'));
+    }
+
+    function photoManualSelect(idx, selectEl) {
+      const opt = selectEl.options[selectEl.selectedIndex];
+      if (!opt || !opt.value) {
+        delete photoManualMap[idx]; photoChecked[idx] = false;
+      } else {
+        const hasPhoto = opt.dataset.photo === '1';
+        photoManualMap[idx] = { name: opt.value, rowIndex: parseInt(opt.dataset.row), hasPhoto: hasPhoto };
+        if (hasPhoto) photoChecked[idx] = false;
+      }
+      renderPhotoTab(document.getElementById('mainContent'));
+    }
+
+    function _photoReviewHTML() {
+      const matched = photoMatches.filter(function(m) { return m.matchStatus === 'matched'; }).length;
+      const hasPhoto = photoMatches.filter(function(m) { return m.matchStatus === 'has_photo'; }).length;
+      const needManual = photoMatches.filter(function(m) { return m.matchStatus === 'unmatched' || m.matchStatus === 'device_name'; }).length;
+      const checkedCount = Object.values(photoChecked).filter(Boolean).length;
+      let html = '<div class="card" style="margin-bottom:12px">'
+        + '<div style="font-size:14px;font-weight:700;margin-bottom:8px">截圖分析結果</div>'
+        + '<div style="display:flex;gap:12px;font-size:13px;flex-wrap:wrap">'
+        + '<span>有視訊：<b>' + photoMatches.length + '</b></span>'
+        + '<span style="color:#2D7D2D">已配對：<b>' + matched + '</b></span>'
+        + (hasPhoto > 0 ? '<span style="color:#9A9690">已有照片：<b>' + hasPhoto + '</b></span>' : '')
+        + (needManual > 0 ? '<span style="color:#C47C00">需手動：<b>' + needManual + '</b></span>' : '')
+        + '</div></div>';
+      html += '<div style="display:flex;gap:8px;margin-bottom:12px">';
+      if (matched > 0) html += '<button onclick="photoSelectAll()" style="flex:1;padding:12px;background:#FDF6E0;border:1.5px solid #D4A82E;border-radius:10px;font-size:14px;font-weight:700;color:#D4A82E;cursor:pointer">全選已配對 (' + matched + ')</button>';
+      if (checkedCount > 0) html += '<button onclick="photoSubmit()" style="flex:1;padding:12px;background:#1D292E;border:none;border-radius:10px;font-size:14px;font-weight:700;color:#F2C94C;cursor:pointer">提交 ' + checkedCount + ' 張</button>';
+      html += '</div><div style="display:flex;flex-direction:column;gap:8px">';
+      photoMatches.forEach(function(m, idx) {
+        const isHasPhoto = m.matchStatus === 'has_photo';
+        const isMatched = m.matchStatus === 'matched';
+        const manualSel = photoManualMap[idx];
+        const isChecked = !!photoChecked[idx];
+        const canCheck = isMatched || (manualSel && !manualSel.hasPhoto);
+        const isManualNeeded = m.matchStatus === 'unmatched' || m.matchStatus === 'device_name';
+        const bg = isHasPhoto ? '#F5F5F5' : isManualNeeded ? '#FFFBF0' : '#FFFFFF';
+        const border = isHasPhoto ? '#E0E0E0' : isManualNeeded ? '#F2C94C' : '#E5E2DA';
+        html += '<div style="background:' + bg + ';border:1.5px solid ' + border + ';border-radius:12px;padding:12px;display:flex;align-items:flex-start;gap:10px">';
+        if (canCheck) {
+          html += '<div onclick="photoToggleCheck(' + idx + ')" style="flex-shrink:0;width:22px;height:22px;border-radius:6px;border:2px solid '
+            + (isChecked ? '#1D292E' : '#D0CCBF') + ';background:' + (isChecked ? '#1D292E' : '#FFF')
+            + ';display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:2px">'
+            + (isChecked ? '<span style="color:#F2C94C;font-size:14px;line-height:1">&#10003;</span>' : '') + '</div>';
+        } else {
+          html += '<div style="flex-shrink:0;width:22px;height:22px"></div>';
+        }
+        html += '<canvas id="tile-' + idx + '" width="48" height="48" style="border-radius:8px;flex-shrink:0;background:#EEE"></canvas>';
+        html += '<div style="flex:1;min-width:0">';
+        html += '<div style="font-size:13px;font-weight:700;color:#1E1E1E;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(m.cleanName || m.displayName) + '</div>';
+        if (isHasPhoto) {
+          html += '<div style="font-size:12px;color:#9A9690">已有照片，略過</div>';
+          if (m.matchedPerson) html += '<div style="font-size:11px;color:#BBB">' + esc(m.matchedPerson.name) + '</div>';
+        } else if (isMatched) {
+          html += '<div style="font-size:12px;color:#2D7D2D">&#8594; ' + esc(m.matchedPerson.name) + ' <span style="color:#AAA;font-size:11px">(' + m.matchScore + '%)</span></div>';
+        } else {
+          html += '<select onchange="photoManualSelect(' + idx + ',this)" style="width:100%;font-size:13px;padding:6px 8px;border:1.5px solid #F2C94C;border-radius:8px;background:#FFF">'
+            + '<option value="">&#8212; 請選擇對應的人 &#8212;</option>'
+            + allPersonsList.map(function(p) {
+                const label = esc(p.name) + (p.ytId ? ' (' + esc(p.ytId) + ')' : '') + (p.hasPhoto ? ' ✓' : '');
+                const sel = (manualSel && manualSel.name === p.name) ? ' selected' : '';
+                return '<option value="' + esc(p.name) + '" data-row="' + p.rowIndex + '" data-photo="' + (p.hasPhoto ? '1' : '0') + '"' + sel + '>' + label + '</option>';
+              }).join('')
+            + '</select>';
+          if (m.matchStatus === 'device_name') html += '<div style="font-size:11px;color:#C47C00;margin-top:3px">疑似裝置名稱</div>';
+          if (manualSel && manualSel.hasPhoto) html += '<div style="font-size:11px;color:#9A9690;margin-top:3px">此人已有照片</div>';
+        }
+        html += '</div></div>';
+      });
+      html += '</div><div style="text-align:center;margin-top:16px"><button onclick="photoReset()" style="padding:10px 20px;background:none;border:1.5px solid #E5E2DA;border-radius:8px;font-size:13px;color:#9A9690;cursor:pointer">重新上傳</button></div>';
+      return html;
+    }
+
+    function photoSubmit() {
+      if (!photoImage || !photoImage.complete) { showToast('圖片尚未載入，請稍後'); return; }
+      const actions = [];
+      photoMatches.forEach(function(m, idx) {
+        if (!photoChecked[idx]) return;
+        let rowIndex, personName;
+        if (m.matchStatus === 'matched' && m.matchedPerson) {
+          rowIndex = m.matchedPerson.rowIndex; personName = m.matchedPerson.name;
+        } else if (photoManualMap[idx]) {
+          rowIndex = photoManualMap[idx].rowIndex; personName = photoManualMap[idx].name;
+        } else return;
+        if (!m.bbox) return;
+        const iw = photoImage.naturalWidth, ih = photoImage.naturalHeight;
+        const bx = Math.round(m.bbox.x / 100 * iw), by = Math.round(m.bbox.y / 100 * ih);
+        const bw = Math.round(m.bbox.w / 100 * iw), bh = Math.round((m.bbox.h / 100 * ih) * 0.80);
+        if (bw <= 0 || bh <= 0) return;
+        const c = document.createElement('canvas');
+        c.width = bw; c.height = bh;
+        c.getContext('2d').drawImage(photoImage, bx, by, bw, bh, 0, 0, bw, bh);
+        actions.push({ rowIndex: rowIndex, personName: personName, photoBase64: c.toDataURL('image/jpeg', 0.85) });
+      });
+      if (!actions.length) { showToast('沒有勾選任何項目'); return; }
+      photoState = 'submitting';
+      renderPhotoTab(document.getElementById('mainContent'));
+      google.script.run
+        .withSuccessHandler(function(r) {
+          photoState = 'done';
+          renderPhotoTab(document.getElementById('mainContent'));
+          showToast('已更新 ' + r.updated + ' 張照片');
+        })
+        .withFailureHandler(function(e) {
+          photoState = 'review';
+          renderPhotoTab(document.getElementById('mainContent'));
+          showToast('寫入失敗：' + e.message);
+        })
+        .batchUpdatePhotos(actions, adminToken);
+    }
+
+    function photoReset() {
+      photoState = 'idle'; photoOriginalBase64 = null; photoImage = null;
+      photoMatches = []; photoChecked = {}; photoManualMap = {};
+      renderPhotoTab(document.getElementById('mainContent'));
+    }
+
+    function _drawPhotoThumbnails() {
+      if (!photoImage) return;
+      if (!photoImage.complete || !photoImage.naturalWidth) {
+        photoImage.onload = _drawPhotoThumbnails; return;
+      }
+      const iw = photoImage.naturalWidth, ih = photoImage.naturalHeight;
+      photoMatches.forEach(function(m, idx) {
+        const canvas = document.getElementById('tile-' + idx);
+        if (!canvas || !m.bbox) return;
+        const bx = m.bbox.x / 100 * iw, by = m.bbox.y / 100 * ih;
+        const bw = m.bbox.w / 100 * iw, bh = (m.bbox.h / 100 * ih) * 0.80;
+        if (bw > 0 && bh > 0) canvas.getContext('2d').drawImage(photoImage, bx, by, bw, bh, 0, 0, 48, 48);
+      });
+    }
+
+    // ============================================================
+    // === Schedule Tab ===
+    // ============================================================
+
+    function renderSchedPersonPicker() {
+      // ⚠️ input 本身不在 innerHtml 裡更新 — 只建一次，之後只更新 #schedACResults
+      // 這樣 IME 組字狀態不會被清掉
+      let h = '<div class="card">';
+      h += '<div style="font-size:15px;font-weight:700;margin-bottom:4px">找到你的名字</div>';
+      h += '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">輸入姓名搜尋，選取自己開始填寫</div>';
+      h += '<input class="input" id="schedACInput" type="search" placeholder="輸入姓名..." autocomplete="off" autocorrect="off" spellcheck="false" oninput="if(!event.isComposing)schedACSearch(this.value)" oncompositionend="schedACSearch(this.value)" style="margin-bottom:10px">';
+      h += '<div id="schedACResults"></div>';
+      h += '</div>';
+      return h;
+    }
+
+    function _schedRenderResults_() {
+      const el = document.getElementById('schedACResults');
+      if (!el) return;
+      let h = '';
+      schedACResults.forEach(function(p) {
+        const av = '<div style="width:40px;height:40px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--yellow);flex-shrink:0">' + esc((p.name||'?')[0]) + '</div>';
+        h += '<div onclick="schedSelectPerson(' + p.rowIndex + ',\'' + esc(p.name).replace(/\'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;cursor:pointer;border:1.5px solid var(--border);margin-bottom:8px;background:#FDFCF9">' + av + '<div style="font-size:15px;font-weight:700">' + esc(p.name) + '</div></div>';
+      });
+      if (schedACResults.length === 0 && schedACInput.length >= 2) {
+        h = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">找不到符合的人名<br><span style="font-size:12px">如果你是第一次使用，請聯絡管理者將你的名字加入名單</span></div>';
+      }
+      el.innerHTML = h;
+    }
+
+    function renderSchedMain() {
+      let h = '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--teal);border-radius:12px;padding:10px 14px;margin-bottom:12px"><div style="display:flex;align-items:center;gap:10px"><div style="width:8px;height:8px;border-radius:50%;background:var(--yellow)"></div><div style="color:#FFF;font-size:15px;font-weight:700">' + esc(schedPersonName) + '</div></div><button onclick="schedClearPerson()" style="background:rgba(255,255,255,0.12);border:none;border-radius:8px;color:rgba(255,255,255,0.6);padding:6px 10px;font-size:12px;cursor:pointer">切換</button></div>';
+      // admin 管理名單子視圖不需要 period 資料
+      if (schedSubView === 'staff') return h + renderSchedAdminStaff();
+      if (!schedViewData) { return h + (schedLoading ? '<div style="text-align:center;padding:40px;color:var(--muted)">載入中…</div>' : '<div style="text-align:center;padding:40px;color:var(--muted)">載入失敗，請重新整理</div>'); }
+      const period = schedViewData.period;
+      if (!period) { return h + '<div class="card" style="text-align:center;color:var(--muted);padding:32px"><div style="font-size:20px;margin-bottom:8px">📋</div><div>目前沒有開放的排班期別</div></div>'; }
+      h += '<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px">' + period.startDate + ' — ' + period.endDate + '</div>';
+      const tabs = [
+        { key:'fill', label:'我的服事' },
+        { key:'roster', label:'一起服事' }
+      ];
+      if (isAdmin) {
+        const pendingCount = (schedOverviewData && schedOverviewData.grid) ? Object.values(schedOverviewData.grid).reduce(function(a, cells){ return a + cells.filter(function(c){return c.status==='change_requested';}).length; }, 0) : 0;
+        tabs.push({ key:'overview', label:'總覽', badge: pendingCount });
+        tabs.push({ key:'staff', label:'管理名單' });
+      }
+      h += '<div style="display:flex;border:1.5px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden">';
+      tabs.forEach(function(t, i) {
+        const active = schedSubView === t.key;
+        const border = i < tabs.length-1 ? 'border-right:1.5px solid var(--border);' : '';
+        const badge = (t.badge && t.badge > 0) ? '<span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;margin-left:4px;background:#E53935;color:#FFF;border-radius:8px;font-size:10px;font-weight:700;vertical-align:middle">' + t.badge + '</span>' : '';
+        h += '<button onclick="schedSwitchView(\'' + t.key + '\')" style="flex:1;padding:10px;border:none;' + border + 'font-size:14px;font-weight:' + (active?'700':'400') + ';background:' + (active?'var(--black)':'#FFF') + ';color:' + (active?'var(--yellow)':'var(--muted)') + ';cursor:pointer;white-space:nowrap">' + t.label + badge + '</button>';
+      });
+      h += '</div>';
+      if (schedSubView === 'fill') return h + renderSchedFillView(period);
+      if (schedSubView === 'roster') return h + renderSchedRoster();
+      if (schedSubView === 'overview') return h + renderSchedAdminOverview();
+      return h;
+    }
+
+    function schedToggleHelp() {
+      schedShowHelp = !schedShowHelp;
+      localStorage.setItem('schedShowHelp', schedShowHelp ? 'true' : 'false');
+      renderScheduleTab(document.getElementById('mainContent'));
+    }
+
+    function renderSchedHelp() {
+      const sm = 'padding:5px 10px;border-radius:16px;font-size:12px;font-weight:700;border:1.5px solid;display:inline-flex;align-items:center;gap:3px;';
+      let h = '<div style="border:1.5px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden">';
+      // 標題列（永遠可見）
+      h += '<div onclick="schedToggleHelp()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:#FDFCF9">';
+      h += '<div style="display:flex;align-items:center;gap:6px"><div style="width:18px;height:18px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#FFF;font-size:11px;font-weight:700;flex-shrink:0">?</div><span style="font-size:13px;font-weight:700;color:var(--teal)">填寫說明</span></div>';
+      h += '<span style="font-size:12px;color:var(--muted)">' + (schedShowHelp ? '收起 ▲' : '展開 ▼') + '</span>';
+      h += '</div>';
+
+      if (schedShowHelp) {
+        h += '<div style="padding:12px 14px;border-top:1px solid var(--border);background:#FFF">';
+
+        // ── 場次狀態 ──
+        h += '<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:.3px">場次狀態（點擊切換）</div>';
+        h += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px">';
+        h += '<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="' + sm + 'background:#FDFCF9;color:#BDBDBD;border-color:#E0E0E0;font-weight:400">未填</div><div style="font-size:11px;color:var(--muted)">還沒決定</div></div>';
+        h += '<div style="color:var(--muted);font-size:16px">→</div>';
+        h += '<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="' + sm + 'background:var(--yellow);color:var(--black);border-color:var(--yellow)">可服事</div><div style="font-size:11px;color:var(--muted)">這週我能來</div></div>';
+        h += '<div style="color:var(--muted);font-size:16px">→</div>';
+        h += '<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="' + sm + 'background:#FEF0ED;color:#C05040;border-color:#E5998A">休息</div><div style="font-size:11px;color:var(--muted)">這週有事</div></div>';
+        h += '</div>';
+
+        // ── Host 隱含說明 ──
+        h += '<div style="background:#FFFBEB;border:1px solid #FCE588;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#7A6320;line-height:1.6">點「可服事」就代表你這週<b>預設是接待（Host）</b>，不用另外選角色。下面的角色只是<b>選填</b>——如果你也能擔任 IT／Rally／主持這些特殊服事，再勾起來。</div>';
+
+        // ── 角色說明 ──
+        h += '<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:.3px">特殊角色（選填，可服事時才出現）</div>';
+        h += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">';
+        // 缺人
+        h += '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">';
+        h += '<div style="' + sm + 'background:#FFF;color:var(--muted);border-color:var(--border)">IT</div>';
+        h += '<div style="font-size:11px;color:var(--muted)">缺人</div></div>';
+        // 已有人
+        h += '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">';
+        h += '<div style="' + sm + 'background:#E8F5E9;color:#2E7D32;border-color:#A5D6A7">Rally ✓</div>';
+        h += '<div style="font-size:11px;color:var(--muted)">已有人選</div></div>';
+        // 我選的
+        h += '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">';
+        h += '<div style="' + sm + 'background:var(--teal);color:#FFF;border-color:var(--teal)">主持</div>';
+        h += '<div style="font-size:11px;color:var(--muted)">我選的</div></div>';
+        // 我選且有別人
+        h += '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">';
+        h += '<div style="' + sm + 'background:var(--teal);color:#FFF;border-color:var(--teal)">IT +1</div>';
+        h += '<div style="font-size:11px;color:var(--muted)">我選＋其他1人</div></div>';
+        h += '</div>';
+
+        h += '</div>';
+      }
+      h += '</div>';
+      return h;
+    }
+
+    function renderSchedFillView(period) {
+      const slots = schedViewData.slots;
+      if (!slots || !slots.length) return '<div class="card" style="text-align:center;color:var(--muted);padding:32px">此期間沒有週日場次</div>';
+      const allSessions = period.sessions || ['9:30','11:30','2:00'];
+      const openRoles   = period.openableRoles || ['IT','Rally','主持'];
+      const showSessions = (schedMyFixedSessions && schedMyFixedSessions.length) ? schedMyFixedSessions : allSessions;
+      let h = '';
+
+      // ── 已發布橫幅（點 4：發布後改動走申請調整）──
+      if (period.published) {
+        h += '<div style="background:#E8F5E9;border:1.5px solid #A5D6A7;border-radius:12px;padding:12px 14px;margin-bottom:12px"><div style="font-size:14px;font-weight:700;color:#2E7D32;margin-bottom:3px">✓ 排班已發布</div><div style="font-size:12px;color:#3A6B45;line-height:1.6">下方是最終安排。若需更動，點該場次送出「申請調整」，管理者收到後會再跟你確認，不會直接改掉已公布的班表。</div></div>';
+      }
+
+      // ── 我這期的服事摘要（含 Host，#2）──
+      const myServe = [];
+      slots.forEach(function(slot) {
+        const e = schedLocalEntries[slot.date+'|'+slot.session];
+        if (e && (e.status === 'available' || e.status === 'assigned')) {
+          const role = e.adminRole || ((e.roles && e.roles.length) ? e.roles.join('·') : 'Host');
+          myServe.push({ date: slot.date, session: slot.session, role: role, assigned: !!e.adminRole });
+        }
+      });
+      h += '<div class="card" style="margin-bottom:12px;padding:14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:' + (myServe.length?'10px':'0') + '"><div style="font-size:14px;font-weight:700;color:var(--teal)">我這期的服事</div><span style="background:var(--yellow);color:var(--black);border-radius:10px;padding:1px 9px;font-size:12px;font-weight:700">' + myServe.length + ' 場</span></div>';
+      if (!myServe.length) {
+        h += '<div style="font-size:12px;color:var(--muted)">還沒選任何場次，往下點卡片把你能來的場次設成「可服事」。</div>';
+      } else {
+        h += '<div style="display:flex;flex-direction:column;gap:6px">';
+        myServe.forEach(function(m) {
+          const isHost = m.role === 'Host';
+          h += '<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="font-weight:600;color:var(--black);min-width:78px">' + schedFmtDate(m.date) + '（日）</span><span style="color:var(--muted);min-width:42px">' + m.session + '</span><span style="' + (isHost ? 'background:#FFF;border:1px solid var(--border);color:var(--muted)' : 'background:var(--teal);color:#FFF') + ';border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">' + (m.assigned ? '✓ ' : '') + esc(m.role) + '</span></div>';
+        });
+        h += '</div>';
+      }
+      h += '</div>';
+
+      // ── 填寫說明 ──
+      h += renderSchedHelp();
+
+      // ── 固定場次選擇（一次設定，記住偏好）──
+      h += '<div class="card" style="margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:6px">我的固定場次</div>';
+      h += '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">選你每週通常會服事的場次</div>';
+      h += '<div style="display:flex;gap:8px">';
+      allSessions.forEach(function(s) {
+        const on = schedMyFixedSessions && schedMyFixedSessions.indexOf(s) >= 0;
+        h += '<button onclick="schedToggleFixedSession(\'' + s + '\')" style="flex:1;padding:11px 0;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:1.5px solid;' + (on ? 'background:var(--teal);color:#FFF;border-color:var(--teal);' : 'background:#FDFCF9;color:var(--muted);border-color:var(--border);') + '">' + s + '</button>';
+      });
+      h += '</div></div>';
+
+      // ── 整期都不能（發布後隱藏，避免批次覆蓋已公布的 Final）──
+      if (!period.published) {
+        h += '<button onclick="schedUnavailableAll()" style="width:100%;padding:11px;background:none;border:1.5px dashed #E5998A;border-radius:12px;color:#C05040;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px">本期全部都不能服事</button>';
+      }
+
+      // ── 週卡片（每週角色各自選）──
+      schedGroupByWeek(slots).forEach(function(week, wi) {
+        const weekSlots = week.slots.filter(function(s) { return showSessions.indexOf(s.session) >= 0; });
+        if (!weekSlots.length) return;
+        const filled = weekSlots.every(function(s) { const e = schedLocalEntries[s.date+'|'+s.session]; return e && e.status; });
+        const hasAvail = weekSlots.some(function(s) { const e = schedLocalEntries[s.date+'|'+s.session]; return e && e.status === 'available'; });
+        h += '<div class="card" style="margin-bottom:8px;padding:14px">';
+        h += '<div style="display:flex;align-items:center;margin-bottom:10px"><div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + (filled ? '#4CAF7D' : 'var(--border)') + ';margin-right:8px"></div><div style="font-size:15px;font-weight:700">第 ' + (wi+1) + ' 週<span style="font-weight:400;color:var(--muted);font-size:13px"> · ' + schedFmtDate(week.date) + '（日）</span></div></div>';
+        const multiSlot = weekSlots.length > 1;
+        h += '<div style="display:flex;gap:8px;margin-bottom:' + (hasAvail ? '10px' : '0') + '">';
+        weekSlots.forEach(function(slot) {
+          const e = schedLocalEntries[slot.date+'|'+slot.session];
+          const avail = e && e.status==='available';
+          const assigned = e && e.status==='assigned';
+          const unavail = e && (e.status==='unavailable_all' || e.status==='unavailable');
+          const changeReq = e && e.status==='change_requested';
+          const assignedRole = e && e.adminRole;
+          // 狀態文字：已排角色 / 可服事 / 休息 / 申請中 / 未填
+          let stateText, chipStyle;
+          if (changeReq) {
+            stateText = '申請中';
+            chipStyle = 'background:#FFF4E0;color:#B26A00;border-color:#F0B860;';
+          } else if (assigned) {
+            stateText = assignedRole || '已排';
+            chipStyle = 'background:var(--teal);color:#FFF;border-color:var(--teal);';
+          } else if (avail) {
+            stateText = assignedRole ? assignedRole : '可服事';
+            chipStyle = 'background:var(--yellow);color:var(--black);border-color:var(--yellow);';
+          } else if (unavail) {
+            stateText = '休息';
+            chipStyle = 'background:#FEF0ED;color:#C05040;border-color:#E5998A;';
+          } else {
+            stateText = '未填';
+            chipStyle = 'background:#FDFCF9;color:#BDBDBD;border-color:#E0E0E0;font-weight:400;';
+          }
+          const sessionLabel = multiSlot ? '<div style="font-size:10px;opacity:0.55;margin-bottom:1px">' + slot.session + '</div>' : '';
+          h += '<button onclick="schedChipClick(\'' + slot.date + '\',\'' + slot.session + '\')" style="flex:1;padding:10px 0;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:1.5px solid;min-height:46px;line-height:1.3;' + chipStyle + '">' + sessionLabel + '<div>' + stateText + '</div></button>';
+        });
+        h += '</div>';
+        // 角色 chip（每週 × 每場獨立統計）
+        if (hasAvail) {
+          const takenRoles = schedViewData.takenRoles || {};
+          h += '<div style="margin-top:8px">';
+          h += '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">預設接待 Host · 也能擔任以下特殊角色再勾選（選填）</div>';
+          weekSlots.forEach(function(slot) {
+            const e = schedLocalEntries[slot.date+'|'+slot.session];
+            if (!e || e.status !== 'available') return;
+            const cellKey = slot.date + '|' + slot.session;
+            const cellTaken = takenRoles[cellKey] || {};
+            const slotRoles = (e.roles && e.roles.length) ? e.roles : [];
+            h += multiSlot ? '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">' + slot.session + '</div>' : '';
+            h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:' + (multiSlot ? '10px' : '0') + '">';
+            openRoles.forEach(function(role) {
+              const mySelected = slotRoles.indexOf(role) >= 0;
+              const otherCount = cellTaken[role] || 0;
+              let chipStyle, chipLabel;
+              if (mySelected) {
+                chipStyle = 'background:var(--teal);color:#FFF;border-color:var(--teal);';
+                chipLabel = role + (otherCount ? ' +' + otherCount : '');
+              } else if (otherCount > 0) {
+                chipStyle = 'background:#E8F5E9;color:#2E7D32;border-color:#A5D6A7;';
+                chipLabel = role + ' ✓';
+              } else {
+                chipStyle = 'background:#FFF;color:var(--muted);border-color:var(--border);';
+                chipLabel = role;
+              }
+              h += '<button onclick="schedToggleRole(\'' + slot.date + '\',\'' + slot.session + '\',\'' + role + '\')" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid;' + chipStyle + '">' + chipLabel + '</button>';
+            });
+            h += '</div>';
+          });
+          h += '</div>';
+        }
+        h += '</div>';
+      });
+
+      // ── 完成填寫按鈕 ──
+      const availCount = Object.keys(schedLocalEntries).filter(function(k) { return schedLocalEntries[k] && schedLocalEntries[k].status === 'available'; }).length;
+      h += '<button onclick="schedCompleteFill()" style="width:100%;padding:14px;background:var(--teal);color:#FFF;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px">' + (availCount ? '完成填寫（已選 ' + availCount + ' 個場次）' : '完成填寫') + '</button>';
+      return h;
+    }
+
+    function renderSchedMineView() {
+      const assigned = [];
+      (schedViewData.slots || []).forEach(function(slot) {
+        const e = schedLocalEntries[slot.date+'|'+slot.session];
+        if (e && (e.adminRole || (e.status==='assigned' && e.roles && e.roles.length))) assigned.push({ date: slot.date, session: slot.session, adminRole: e.adminRole||'', roles: e.roles||[] });
+      });
+      if (!assigned.length) return '<div class="card" style="text-align:center;color:var(--muted);padding:32px"><div style="font-size:20px;margin-bottom:8px">📅</div><div>尚未指派服事</div><div style="font-size:12px;margin-top:4px">管理者指派後會顯示在這裡</div></div>';
+      return assigned.map(function(a) {
+        const rt = a.adminRole || (a.roles.length ? a.roles.join(' · ') : '服事');
+        return '<div class="card" style="display:flex;align-items:center;gap:12px;padding:14px"><div style="width:44px;height:44px;border-radius:10px;background:var(--yellow);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">' + a.session + '</div><div><div style="font-size:14px;font-weight:700;color:var(--teal)">' + schedFmtDate(a.date) + '（日）</div><div style="font-size:13px;color:var(--muted);margin-top:2px">' + esc(rt) + '</div></div></div>';
+      }).join('');
+    }
+
+    function renderSchedAdminStaff() {
+      let h = '';
+      // 新增輸入列
+      h += '<div class="card" style="margin-bottom:12px"><div style="font-size:14px;font-weight:700;margin-bottom:10px">新增服事夥伴</div>';
+      h += '<div style="display:flex;gap:8px"><input class="input" id="schedAddStaffInput" type="text" placeholder="輸入姓名..." value="' + esc(schedAddStaffInput) + '" oninput="schedAddStaffInput=this.value" style="flex:1;margin-bottom:0" onkeydown="if(event.key===\'Enter\')schedDoAddStaff()"><button onclick="schedDoAddStaff()" style="padding:10px 16px;background:var(--teal);color:#FFF;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">新增</button></div></div>';
+      // 名單列表
+      if (schedStaffLoading) {
+        h += '<div style="text-align:center;padding:32px;color:var(--muted)">載入中…</div>';
+      } else if (!schedStaffList) {
+        h += '<div style="text-align:center;padding:32px;color:var(--muted)">點上方「新增」或等待載入…</div>';
+      } else if (!schedStaffList.length) {
+        h += '<div class="card" style="text-align:center;color:var(--muted);padding:32px">名單是空的，先新增服事夥伴</div>';
+      } else {
+        const sortByName = function(a, b) { return a.name.localeCompare(b.name, 'zh-TW'); };
+        const allActive = schedStaffList.filter(function(s) { return s.status !== 'inactive'; }).sort(sortByName);
+        const inactive = schedStaffList.filter(function(s) { return s.status === 'inactive'; }).sort(sortByName);
+
+        // ── 場次篩選 tab（點 6）──
+        const filterOpts = ['全部','9:30','11:30','2:00','跨場','未分場'];
+        const sessOf = function(s) { return s.homeSession ? s.homeSession : '未分場'; };
+        h += '<div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:10px;padding-bottom:2px">';
+        filterOpts.forEach(function(f) {
+          const n = f === '全部' ? allActive.length : allActive.filter(function(s){ return sessOf(s) === f; }).length;
+          const on = schedStaffSessionFilter === f;
+          h += '<button onclick="schedSetStaffFilter(\'' + f + '\')" style="flex:0 0 auto;padding:6px 12px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid;' + (on ? 'background:var(--black);color:var(--yellow);border-color:var(--black);' : 'background:#FFF;color:var(--muted);border-color:var(--border);') + '">' + f + ' ' + n + '</button>';
+        });
+        h += '</div>';
+
+        const active = schedStaffSessionFilter === '全部' ? allActive : allActive.filter(function(s){ return sessOf(s) === schedStaffSessionFilter; });
+        h += '<div style="font-size:13px;color:var(--muted);margin-bottom:8px">' + (schedStaffSessionFilter === '全部' ? '共 ' + active.length + ' 位在職服事夥伴' : schedStaffSessionFilter + '：' + active.length + ' 位') + '</div>';
+        const sessOptsJs = ['','9:30','11:30','2:00','跨場'];
+        active.forEach(function(s) {
+          const cur = s.homeSession || '';
+          let sel = '<select onchange="schedSetStaffSession(' + s.rowIndex + ',this.value)" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 6px;font-size:12px;color:var(--teal);background:#FFF;cursor:pointer">';
+          sessOptsJs.forEach(function(o) {
+            sel += '<option value="' + o + '"' + (o === cur ? ' selected' : '') + '>' + (o === '' ? '未分場' : o) + '</option>';
+          });
+          sel += '</select>';
+          h += '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;margin-bottom:8px;background:#FDFCF9">';
+          h += '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">' + esc(s.name) + '</div>' + (s.note ? '<div style="font-size:12px;color:var(--muted)">' + esc(s.note) + '</div>' : '') + '</div>';
+          h += sel;
+          h += '<button onclick="schedToggleStaff(' + s.rowIndex + ',\'inactive\')" style="padding:5px 10px;background:none;border:1.5px solid #E5998A;border-radius:8px;color:#C05040;font-size:12px;cursor:pointer;white-space:nowrap">休息</button>';
+          h += '</div>';
+        });
+        if (inactive.length) {
+          h += '<div style="font-size:12px;color:var(--muted);margin:12px 0 8px">休息中（' + inactive.length + '）</div>';
+          inactive.forEach(function(s) {
+            h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1.5px dashed var(--border);border-radius:12px;margin-bottom:8px;opacity:0.6"><div style="font-size:14px;color:var(--muted)">' + esc(s.name) + '</div><button onclick="schedToggleStaff(' + s.rowIndex + ',\'active\')" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer">復原</button></div>';
+          });
+        }
+      }
+      return h;
+    }
+
+    function schedLoadStaff() {
+      if (!adminToken) return;
+      schedStaffLoading = true;
+      renderScheduleTab(document.getElementById('mainContent'));
+      google.script.run
+        .withSuccessHandler(function(d) {
+          schedStaffLoading = false;
+          schedStaffList = d && d.success ? d.staff : [];
+          renderScheduleTab(document.getElementById('mainContent'));
+        })
+        .withFailureHandler(function(e) {
+          schedStaffLoading = false;
+          showToast('載入名單失敗: ' + (e.message||e));
+          renderScheduleTab(document.getElementById('mainContent'));
+        })
+        .getStaffList(adminToken);
+    }
+
+    function schedDoAddStaff() {
+      const name = schedAddStaffInput.trim();
+      if (!name) { showToast('請輸入姓名'); return; }
+      if (!adminToken) { showToast('請先登入管理者'); return; }
+      google.script.run
+        .withSuccessHandler(function(d) {
+          if (d && d.success) {
+            schedAddStaffInput = '';
+            showToast('已新增「' + name + '」');
+            schedLoadStaff();
+          } else {
+            showToast('新增失敗: ' + (d&&d.error||'未知錯誤'));
+          }
+        })
+        .withFailureHandler(function(e) { showToast('新增失敗: ' + (e.message||e)); })
+        .addStaffMember(name, '', adminToken);
+    }
+
+    function schedToggleStaff(rowIndex, newStatus) {
+      if (!adminToken) return;
+      google.script.run
+        .withSuccessHandler(function(d) {
+          if (d && d.success) schedLoadStaff();
+          else showToast('操作失敗');
+        })
+        .withFailureHandler(function(e) { showToast('操作失敗: ' + (e.message||e)); })
+        .setStaffStatus(rowIndex, newStatus, adminToken);
+    }
+
+    // 名單場次篩選（點 6，純前端）
+    function schedSetStaffFilter(f) {
+      schedStaffSessionFilter = f;
+      localStorage.setItem('schedStaffSessionFilter', f);
+      renderScheduleTab(document.getElementById('mainContent'));
+    }
+
+    // 設定某夥伴的主要場次（點 6）
+    function schedSetStaffSession(rowIndex, session) {
+      if (!adminToken) { showToast('請先登入管理者'); return; }
+      // 樂觀更新本機，避免整頁重載讓 select 跳動
+      if (schedStaffList) {
+        const item = schedStaffList.find(function(s){ return s.rowIndex === rowIndex; });
+        if (item) item.homeSession = session;
+      }
+      renderScheduleTab(document.getElementById('mainContent'));
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (!r || !r.success) { showToast((r && r.error) || '設定場次失敗'); schedLoadStaff(); }
+          else showToast(session ? '已設為 ' + session : '已清除場次');
+        })
+        .withFailureHandler(function(e) { showToast('設定失敗: ' + (e.message||e)); schedLoadStaff(); })
+        .setStaffHomeSession(rowIndex, session, adminToken);
+    }
+
+    function _schedAdminTabBar_() {
+      const tabs = [
+        { key:'fill', label:'我的排班' },
+        { key:'mine', label:'我的服事' },
+        { key:'overview', label:'總覽' },
+        { key:'staff', label:'管理名單' }
+      ];
+      let h = '<div style="display:flex;border:1.5px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden">';
+      tabs.forEach(function(t, i) {
+        const active = schedSubView === t.key;
+        const border = i < tabs.length-1 ? 'border-right:1.5px solid var(--border);' : '';
+        h += '<button onclick="schedSwitchView(\'' + t.key + '\')" style="flex:1;padding:10px;border:none;' + border + 'font-size:14px;font-weight:' + (active?'700':'400') + ';background:' + (active?'var(--black)':'#FFF') + ';color:' + (active?'var(--yellow)':'var(--muted)') + ';cursor:pointer">' + t.label + '</button>';
+      });
+      h += '</div>';
+      return h;
+    }
+
+    function renderScheduleTab(el) {
+      let html = '<div class="anim-fade">';
+      html += '<div class="section-title">服事排班</div>';
+      // Admin 可直接進入管理名單，不需先選人
+      if (isAdmin && schedSubView === 'staff') {
+        html += _schedAdminTabBar_();
+        html += renderSchedAdminStaff();
+      } else if (isAdmin && schedSubView === 'overview') {
+        html += _schedAdminTabBar_();
+        try { html += renderSchedAdminOverview(); }
+        catch(e) { html += '<div style="color:red;padding:16px;background:#FFF5F5;border-radius:8px;margin:8px 0;font-size:12px">渲染錯誤: ' + (e.message||String(e)) + '</div>'; }
+      } else if (!schedPersonRow) {
+        html += renderSchedPersonPicker();
+        if (isAdmin) {
+          html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">';
+          html += '<button onclick="schedSwitchView(\'overview\')" style="padding:12px;background:none;border:1.5px solid var(--border);border-radius:12px;color:var(--teal);font-size:14px;font-weight:600;cursor:pointer">排班總覽</button>';
+          html += '<button onclick="schedSwitchView(\'staff\')" style="padding:12px;background:none;border:1.5px solid var(--border);border-radius:12px;color:var(--teal);font-size:14px;font-weight:600;cursor:pointer">管理名單</button>';
+          html += '</div>';
+        }
+      } else {
+        html += renderSchedMain();
+      }
+      html += '</div>';
+      el.innerHTML = html;
+      if (!schedPersonRow && schedSubView !== 'staff') {
+        const inp = document.getElementById('schedACInput');
+        if (inp) {
+          if (schedACInput) inp.value = schedACInput; // 還原上次輸入
+          inp.focus();
+        }
+        _schedRenderResults_(); // 還原已有的搜尋結果
+      } else if (schedSubView !== 'staff' && schedSubView !== 'overview' && !schedViewData && !schedLoading) {
+        schedLoadView();
+      }
+      if (schedSubView === 'staff' && !schedStaffList && !schedStaffLoading) schedLoadStaff();
+      if (schedSubView === 'overview' && !schedOverviewData && !schedOverviewLoading) schedLoadOverview();
+    }
+
+    function schedLoadView() {
+      schedLoading = true;
+      renderScheduleTab(document.getElementById('mainContent'));
+      google.script.run
+        .withSuccessHandler(function(d) {
+          schedLoading = false; schedViewData = d;
+          if (d && d.entries) {
+            Object.keys(d.entries).forEach(function(k) { if (!schedPending[k]) schedLocalEntries[k] = d.entries[k]; });
+          }
+          renderScheduleTab(document.getElementById('mainContent'));
+          // admin 預抓總覽，讓「總覽」分頁的申請調整紅點主動亮（#4）
+          if (isAdmin && !schedOverviewData && !schedOverviewLoading) schedLoadOverview();
+        })
+        .withFailureHandler(function(e) {
+          schedLoading = false;
+          renderScheduleTab(document.getElementById('mainContent'));
+          showToast('載入失敗: ' + (e.message||e));
+        })
+        .getScheduleViewForUser(schedPersonRow);
+    }
+
+    // 公開名冊（點 7）：所有夥伴可看某主日各場一起服事的人
+    function schedLoadRoster() {
+      schedRosterLoading = true; schedRosterData = null;
+      renderScheduleTab(document.getElementById('mainContent'));
+      google.script.run
+        .withSuccessHandler(function(d) {
+          schedRosterLoading = false; schedRosterData = d || { roster: {}, slots: [] };
+          renderScheduleTab(document.getElementById('mainContent'));
+        })
+        .withFailureHandler(function(e) {
+          schedRosterLoading = false; schedRosterData = { roster: {}, slots: [] };
+          renderScheduleTab(document.getElementById('mainContent'));
+          showToast('載入失敗: ' + (e.message||e));
+        })
+        .getPublicRoster(null);
+    }
+
+    function renderSchedRoster() {
+      if (schedRosterLoading) return '<div style="text-align:center;padding:40px;color:var(--muted)">載入中…</div>';
+      if (!schedRosterData) { schedLoadRoster(); return '<div style="text-align:center;padding:40px;color:var(--muted)">載入中…</div>'; }
+      const slots = schedRosterData.slots || [];
+      const roster = schedRosterData.roster || {};
+      if (!slots.length) return '<div class="card" style="text-align:center;color:var(--muted);padding:32px">目前沒有排班資料</div>';
+      const byDate = {};
+      slots.forEach(function(s) { if (!byDate[s.date]) byDate[s.date] = []; byDate[s.date].push(s.session); });
+      const dayNames = ['日','一','二','三','四','五','六'];
+      const dates = Object.keys(byDate).sort();
+      let h = '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">每個主日各場一起服事的夥伴 ✓ 後是已指派角色</div>';
+      h += '<div class="sched-two-col">';
+      dates.forEach(function(date) {
+        const d = date.split('-');
+        const dayOfWeek = dayNames[new Date(date + 'T00:00:00').getDay()];
+        h += '<div style="margin-bottom:10px;border-radius:12px;overflow:hidden;border:1.5px solid var(--border)">';
+        h += '<div style="background:var(--black);color:var(--yellow);font-size:13px;font-weight:700;padding:9px 14px">' + parseInt(d[1]) + '/' + parseInt(d[2]) + '（' + dayOfWeek + '）</div>';
+        byDate[date].forEach(function(sess, si) {
+          const people = roster[date + '|' + sess] || [];
+          const border = si < byDate[date].length-1 ? 'border-bottom:1px solid var(--border);' : '';
+          h += '<div style="padding:10px 14px;background:#FFF;' + border + '">';
+          h += '<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">' + sess + '（' + people.length + ' 人）</div>';
+          if (!people.length) {
+            h += '<div style="font-size:13px;color:#BDBDBD;font-style:italic">尚無人</div>';
+          } else {
+            h += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+            people.forEach(function(p) {
+              const isHost = (p.role === 'Host');
+              h += '<span style="display:inline-flex;align-items:center;gap:4px;border-radius:16px;padding:4px 10px;font-size:13px;border:1.5px solid ' + (isHost ? 'var(--border);background:#FFF;color:var(--black)' : 'var(--teal);background:var(--teal);color:#FFF') + '">' + esc(p.name) + (isHost ? '' : ' <span style="font-size:11px;font-weight:700">· ' + esc(p.role) + '</span>') + '</span>';
+            });
+            h += '</div>';
+          }
+          h += '</div>';
+        });
+        h += '</div>';
+      });
+      h += '</div>'; // close .sched-two-col
+      return h;
+    }
+
+    function schedACSearch(val) {
+      schedACInput = val;
+      if (val.length < 2) { schedACResults = []; _schedRenderResults_(); return; }
+      google.script.run
+        .withSuccessHandler(function(items) { schedACResults = items || []; _schedRenderResults_(); })
+        .withFailureHandler(function() { schedACResults = []; _schedRenderResults_(); })
+        .getStaffSuggestions(val);
+    }
+
+    function schedSelectPerson(rowIndex, name) {
+      schedPersonRow = rowIndex; schedPersonName = name;
+      schedACInput = ''; schedACResults = []; schedViewData = null; schedLocalEntries = {}; schedSubView = 'fill';
+      localStorage.setItem('schedPersonRow', rowIndex); localStorage.setItem('schedPersonName', name);
+      renderScheduleTab(document.getElementById('mainContent'));
+    }
+
+    function schedClearPerson() {
+      schedPersonRow = 0; schedPersonName = ''; schedViewData = null; schedLocalEntries = {};
+      localStorage.removeItem('schedPersonRow'); localStorage.removeItem('schedPersonName');
+      renderScheduleTab(document.getElementById('mainContent'));
+    }
+
+    function schedSwitchView(v) {
+      schedSubView = v;
+      renderScheduleTab(document.getElementById('mainContent'));
+      if (v === 'staff' && !schedStaffList && !schedStaffLoading) schedLoadStaff();
+      if (v === 'overview' && !schedOverviewData && !schedOverviewLoading) schedLoadOverview();
+      if (v === 'roster' && !schedRosterData && !schedRosterLoading) schedLoadRoster();
+    }
+
+    function schedToggleWeek() { schedCollapseFilled = !schedCollapseFilled; renderScheduleTab(document.getElementById('mainContent')); }
+
+    function schedGroupByWeek(slots) {
+      const weeks = []; let lastDate = null; let cur = null;
+      slots.forEach(function(s) {
+        if (s.date !== lastDate) { cur = { date: s.date, slots: [] }; weeks.push(cur); lastDate = s.date; }
+        cur.slots.push(s);
+      });
+      return weeks;
+    }
+
+    function schedFmtDate(d) { const p = d.split('-'); return p.length < 3 ? d : parseInt(p[1]) + '/' + parseInt(p[2]); }
+
+    function schedGetWeekRoles(week) {
+      for (let i = 0; i < week.slots.length; i++) {
+        const e = schedLocalEntries[week.slots[i].date + '|' + week.slots[i].session];
+        if (e && e.status === 'available' && e.roles && e.roles.length > 0) return e.roles;
+      }
+      return [];
+    }
+
+    function schedChipClick(date, session) {
+      // 排班已發布 → 不直接覆蓋，改走「申請調整」（點 4）
+      if (schedViewData && schedViewData.period && schedViewData.period.published) {
+        schedRequestChange(date, session);
+        return;
+      }
+      const key = date + '|' + session;
+      const cur = schedLocalEntries[key] || {};
+      let newStatus;
+      if (!cur.status) {
+        newStatus = 'available';       // 未填 → 可服事
+      } else if (cur.status === 'available') {
+        newStatus = 'unavailable_all'; // 可服事 → 休息
+      } else {
+        newStatus = 'available';       // 休息 → 可服事
+      }
+      const newRoles = newStatus === 'available' ? (cur.roles || []) : [];
+      schedLocalEntries[key] = Object.assign({}, cur, { status: newStatus, roles: newRoles });
+      renderScheduleTab(document.getElementById('mainContent'));
+      schedQueueSubmit(date, session, newStatus, newRoles);
+    }
+
+    function schedToggleRole(date, session, role) {
+      // 排班已發布 → 角色也不直接改，走「申請調整」（點 4）
+      if (schedViewData && schedViewData.period && schedViewData.period.published) {
+        schedRequestChange(date, session);
+        return;
+      }
+      // 角色現在 per slot（date+session），不再 per week
+      const key = date + '|' + session;
+      const e = schedLocalEntries[key];
+      if (!e || e.status !== 'available') return;
+      const curRoles = (e.roles || []).slice();
+      const idx = curRoles.indexOf(role);
+      if (idx >= 0) curRoles.splice(idx, 1); else curRoles.push(role);
+      schedLocalEntries[key] = Object.assign({}, e, { roles: curRoles });
+      schedQueueSubmit(date, session, 'available', curRoles);
+      renderScheduleTab(document.getElementById('mainContent'));
+    }
+
+    function schedToggleFixedSession(session) {
+      if (!schedMyFixedSessions) schedMyFixedSessions = [];
+      const idx = schedMyFixedSessions.indexOf(session);
+      if (idx >= 0) schedMyFixedSessions.splice(idx, 1); else schedMyFixedSessions.push(session);
+      localStorage.setItem('schedMyFixedSessions', JSON.stringify(schedMyFixedSessions));
+      renderScheduleTab(document.getElementById('mainContent'));
+    }
+
+    function schedToggleFixedRole(role) {
+      const idx = schedMyFixedRoles.indexOf(role);
+      if (idx >= 0) schedMyFixedRoles.splice(idx, 1); else schedMyFixedRoles.push(role);
+      localStorage.setItem('schedMyFixedRoles', JSON.stringify(schedMyFixedRoles));
+      // 同步更新所有已勾選場次的角色
+      Object.keys(schedLocalEntries).forEach(function(k) {
+        const e = schedLocalEntries[k];
+        if (e && e.status === 'available') {
+          schedLocalEntries[k] = Object.assign({}, e, { roles: schedMyFixedRoles.slice() });
+          const parts = k.split('|');
+          schedQueueSubmit(parts[0], parts[1], 'available', schedMyFixedRoles.slice());
+        }
+      });
+      renderScheduleTab(document.getElementById('mainContent'));
+    }
+
+    function schedCompleteFill() {
+      const availCount = Object.keys(schedLocalEntries).filter(function(k) { return schedLocalEntries[k] && schedLocalEntries[k].status === 'available'; }).length;
+      showToast(availCount ? '已儲存，共 ' + availCount + ' 個場次可服事 ✓' : '已儲存');
+    }
+
+    function schedUnavailableAll() {
+      if (!confirm('確定本期全部都不能服事嗎？')) return;
+      const period = schedViewData && schedViewData.period;
+      if (!period) { showToast('找不到期別'); return; }
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(r) {
+          hideLoading();
+          if (r && r.success) { showToast('已送出：本期都不能服事'); schedViewData = null; schedLocalEntries = {}; schedLoadView(); }
+          else showToast('送出失敗，請重試');
+        })
+        .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + (e.message||e)); })
+        .submitUnavailableAll(period.periodId, schedPersonRow, null);
+    }
+
+    function schedQueueSubmit(date, session, status, roles) {
+      const period = schedViewData && schedViewData.period; if (!period) return;
+      const key = date + '|' + session;
+      schedPending[key] = { periodId: period.periodId, personRowIndex: schedPersonRow, date: date, session: session, status: status || 'available', roles: roles || [], note: '' };
+      clearTimeout(schedBatchTimer);
+      schedBatchTimer = setTimeout(function() {
+        const batch = Object.values(schedPending); schedPending = {};
+        if (!batch.length) return;
+        // 一次送整批（後端 batchSubmitScheduleEntries 只讀表一次，取代每筆各打一次）
+        google.script.run
+          .withSuccessHandler(function() {})
+          .withFailureHandler(function(e) { showToast('排班儲存失敗: ' + (e.message||e)); })
+          .batchSubmitScheduleEntries(batch, null);
+      }, 500);
+    }
+
+    // 排班已發布後，夥伴申請調整某場次（不直接覆蓋 Final，送 change_requested 給管理者）
+    function schedRequestChange(date, session) {
+      const period = schedViewData && schedViewData.period; if (!period) return;
+      const reason = prompt('排班已發布。要向管理者申請調整「' + schedFmtDate(date) + '（日）' + session + '」嗎？\n請簡短說明原因（例：臨時有事、想換場次）：');
+      if (reason === null) return;        // 按取消
+      const trimmed = String(reason).trim();
+      if (!trimmed) { showToast('請填寫調整原因'); return; }
+      const key = date + '|' + session;
+      const cur = schedLocalEntries[key] || {};
+      schedLocalEntries[key] = Object.assign({}, cur, { status: 'change_requested', note: trimmed });
+      renderScheduleTab(document.getElementById('mainContent'));
+      google.script.run
+        .withSuccessHandler(function() { showToast('已送出調整申請，管理者會再跟你確認 ✓'); })
+        .withFailureHandler(function(e) { showToast('送出失敗: ' + (e.message||e)); })
+        .submitScheduleEntry({ periodId: period.periodId, personRowIndex: schedPersonRow, date: date, session: session, status: 'change_requested', roles: cur.roles || [], note: trimmed }, null);
+    }
+
+    // ============================================================
+    // === Admin 總覽 ===
+    // ============================================================
+
+    function schedLoadOverview() {
+      if (!isAdmin) return;
+      schedOverviewLoading = true; schedOverviewData = null; schedUnfilledData = null;
+      renderScheduleTab(document.getElementById('mainContent'));
+      // 單一 GAS 呼叫取得所有資料（避免巢狀 google.script.run 靜默失敗問題）
+      google.script.run
+        .withSuccessHandler(function(d) {
+          schedOverviewLoading = false;
+          if (d && d.success) {
+            schedOverviewData = { success: true, period: d.period, slots: d.slots, grid: d.grid, counts: d.counts || {}, staffSessions: d.staffSessions || {} };
+            schedUnfilledData = { success: true, unfilled: d.unfilled };
+          } else {
+            schedOverviewData = { period: null, slots: [], grid: {} };
+            schedUnfilledData = { unfilled: [] };
+          }
+          renderScheduleTab(document.getElementById('mainContent'));
+        })
+        .withFailureHandler(function(e) {
+          schedOverviewLoading = false;
+          schedOverviewData = null;
+          renderScheduleTab(document.getElementById('mainContent'));
+          showToast('載入總覽失敗: ' + (e && e.message ? e.message : '未知錯誤'));
+        })
+        .getAdminOverviewAll();
+    }
+
+    function schedOverviewSwitchView(v) {
+      schedOverviewSubView = v;
+      renderScheduleTab(document.getElementById('mainContent'));
+    }
+
+    function schedOverviewRefresh() {
+      schedOverviewData = null; schedUnfilledData = null;
+      schedLoadOverview();
+    }
+
+    // 發布 / 取消發布 Final 排班（點 4）
+    function schedTogglePublish(publish) {
+      const period = schedOverviewData && schedOverviewData.period;
+      if (!period || !adminToken) { showToast('請先登入 Admin'); return; }
+      const msg = publish
+        ? '確定發布 Final 排班嗎？\n發布後夥伴端不能直接改，只能送「申請調整」給你。'
+        : '確定取消發布嗎？\n夥伴端會恢復自由填寫。';
+      if (!confirm(msg)) return;
+      showLoading();
+      const fn = publish ? 'publishPeriod' : 'unpublishPeriod';
+      google.script.run
+        .withSuccessHandler(function(r) {
+          hideLoading();
+          if (r && r.success) {
+            showToast(publish ? '已發布 Final 排班 ✓' : '已取消發布');
+            schedOverviewData = null; schedUnfilledData = null; schedLoadOverview();
+          } else { showToast((r && r.error) || '操作失敗'); }
+        })
+        .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + (e.message||e)); })
+        [fn](period.periodId, adminToken);
+    }
+
+    function renderSchedAdminOverview() {
+      if (schedOverviewLoading) return '<div style="text-align:center;padding:40px;color:var(--muted)">載入中…</div>';
+      if (!schedOverviewData) return '<div style="text-align:center;padding:40px;color:var(--muted)">載入失敗 <button onclick="schedOverviewRefresh()" style="margin-left:8px;background:none;border:1.5px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--teal)">重試</button></div>';
+      if (!schedOverviewData.period) return '<div class="card" style="text-align:center;color:var(--muted);padding:32px">目前沒有開放的排班期別</div>';
+      const period = schedOverviewData.period;
+      let h = '';
+      h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+      h += '<div style="font-size:12px;color:var(--muted)">' + period.startDate + ' — ' + period.endDate + '</div>';
+      h += '<button onclick="schedOverviewRefresh()" style="background:none;border:1.5px solid var(--border);border-radius:6px;padding:3px 10px;font-size:12px;color:var(--muted);cursor:pointer">重新整理</button>';
+      h += '</div>';
+      // ── 發布狀態 + 發布／取消發布（點 4：發布後夥伴端改動走申請調整）──
+      if (period.published) {
+        h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#E8F5E9;border:1.5px solid #A5D6A7;border-radius:10px;padding:9px 12px;margin-bottom:12px">';
+        h += '<div style="font-size:12px;color:#2E7D32;font-weight:700">✓ 已發布｜夥伴改動會走「申請調整」</div>';
+        h += '<button onclick="schedTogglePublish(false)" style="background:none;border:1.5px solid #A5D6A7;border-radius:6px;padding:3px 10px;font-size:12px;color:#2E7D32;cursor:pointer;white-space:nowrap">取消發布</button>';
+        h += '</div>';
+      } else {
+        h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#FFF8E1;border:1.5px solid #FCE588;border-radius:10px;padding:9px 12px;margin-bottom:12px">';
+        h += '<div style="font-size:12px;color:#7A6320">尚未發布｜夥伴可自由填寫意願</div>';
+        h += '<button onclick="schedTogglePublish(true)" style="background:var(--teal);border:none;border-radius:6px;padding:5px 12px;font-size:12px;color:#FFF;font-weight:700;cursor:pointer;white-space:nowrap">發布 Final 排班</button>';
+        h += '</div>';
+      }
+      const ovTabs = [{ key:'status', label:'填寫狀況' }, { key:'grid', label:'排班 grid' }];
+      h += '<div style="display:flex;border:1.5px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden">';
+      ovTabs.forEach(function(t, i) {
+        const active = schedOverviewSubView === t.key;
+        const border = i < ovTabs.length-1 ? 'border-right:1.5px solid var(--border);' : '';
+        h += '<button onclick="schedOverviewSwitchView(\'' + t.key + '\')" style="flex:1;padding:10px;border:none;' + border + 'font-size:14px;font-weight:' + (active?'700':'400') + ';background:' + (active?'var(--black)':'#FFF') + ';color:' + (active?'var(--yellow)':'var(--muted)') + ';cursor:pointer">' + t.label + '</button>';
+      });
+      h += '</div>';
+      if (schedOverviewSubView === 'status') return h + renderSchedFillStatus_();
+      if (schedOverviewSubView === 'grid') return h + renderSchedAdminGrid_();
+      return h;
+    }
+
+    function renderSchedFillStatus_() {
+      const grid = schedOverviewData.grid || {};
+      const staffSessions = schedOverviewData.staffSessions || {};
+      const personMap = {};
+      Object.values(grid).forEach(function(cells) {
+        cells.forEach(function(c) {
+          if (!personMap[c.personRowIndex]) personMap[c.personRowIndex] = { name: c.name, home: c.homeSession || staffSessions[c.personRowIndex] || '', hasAvailable: false, hasUnavailable: false, hasChangeReq: false };
+          if (c.status === 'available' || c.status === 'assigned') personMap[c.personRowIndex].hasAvailable = true;
+          else if (c.status === 'unavailable_all') personMap[c.personRowIndex].hasUnavailable = true;
+          if (c.status === 'change_requested') personMap[c.personRowIndex].hasChangeReq = true;
+        });
+      });
+      // 整合所有人（含未填）→ {name, home, status, changeReq}
+      const people = [];
+      const changeReq = [];
+      Object.values(personMap).forEach(function(p) {
+        if (p.hasChangeReq) changeReq.push(p.name);
+        const status = p.hasAvailable ? 'filled' : (p.hasUnavailable ? 'unavailable' : 'filled');
+        people.push({ name: p.name, home: p.home || '未分場', status: status, changeReq: p.hasChangeReq });
+      });
+      if (schedUnfilledData && schedUnfilledData.unfilled) {
+        schedUnfilledData.unfilled.forEach(function(u) { people.push({ name: u.name, home: u.homeSession || '未分場', status: 'unfilled', changeReq: false }); });
+      }
+      const filledN = people.filter(function(p){return p.status==='filled';}).length;
+      const unavailN = people.filter(function(p){return p.status==='unavailable';}).length;
+      const unfilledN = people.filter(function(p){return p.status==='unfilled';}).length;
+      let h = '';
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">';
+      h += '<div style="background:#E8F5E9;border-radius:10px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:#2E7D32">' + filledN + '</div><div style="font-size:11px;color:#2E7D32">已填</div></div>';
+      h += '<div style="background:#ECEFF1;border-radius:10px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:#546E7A">' + unavailN + '</div><div style="font-size:11px;color:#546E7A">整期不能</div></div>';
+      h += '<div style="background:#FFF8E1;border-radius:10px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:#F57F17">' + unfilledN + '</div><div style="font-size:11px;color:#F57F17">未填</div></div>';
+      h += '</div>';
+      if (changeReq.length > 0) {
+        h += '<div style="background:#FFF4E0;border:1.5px solid #F0B860;border-radius:10px;padding:11px 14px;margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:#B26A00;margin-bottom:3px">⚠ ' + changeReq.length + ' 人申請調整</div><div style="font-size:12px;color:#8A5A12">' + changeReq.map(function(n){return esc(n);}).join('、') + '</div><div style="font-size:11px;color:#A06A20;margin-top:4px">到「排班 grid」看橘色「申請調整」標記，原因在備註。</div></div>';
+      }
+      if (!people.length) return h + '<div class="card" style="text-align:center;color:var(--muted);padding:24px">尚無服事夥伴資料</div>';
+
+      // ── 依場次分組顯示誰已填／未填（#1）──
+      const _qaU_ = function(v){ return JSON.stringify(v).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'&quot;'); };
+      const sortName = function(a, b){ return a.name.localeCompare(b.name, 'zh-TW'); };
+      ['9:30','11:30','2:00','跨場','未分場'].forEach(function(sessName) {
+        const group = people.filter(function(p){ return p.home === sessName; }).sort(sortName);
+        if (!group.length) return;
+        const gUnfilled = group.filter(function(p){ return p.status==='unfilled'; });
+        h += '<div style="margin-bottom:14px">';
+        h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="font-size:14px;font-weight:700;color:var(--teal)">' + sessName + '</div><span style="font-size:11px;color:var(--muted)">已填 ' + group.filter(function(p){return p.status==='filled';}).length + ' · 未填 ' + gUnfilled.length + '</span>';
+        if (gUnfilled.length) {
+          h += '<button onclick="schedCopyUnfilled(' + _qaU_(gUnfilled.map(function(p){return p.name;})) + ')" style="margin-left:auto;background:#FFF8E1;border:1.5px solid #F57F17;border-radius:6px;padding:3px 9px;font-size:11px;color:#F57F17;font-weight:700;cursor:pointer">複製未填 ' + gUnfilled.length + '</button>';
+        }
+        h += '</div>';
+        h += '<div class="card" style="padding:0;overflow:hidden">';
+        group.forEach(function(p, i) {
+          const border = i < group.length-1 ? 'border-bottom:1px solid var(--border);' : '';
+          let badge;
+          if (p.status === 'filled') badge = '<span style="background:#E8F5E9;color:#2E7D32;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">已填</span>';
+          else if (p.status === 'unavailable') badge = '<span style="background:#ECEFF1;color:#546E7A;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">整期不能</span>';
+          else badge = '<span style="background:#FFF8E1;color:#F57F17;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">未填</span>';
+          const crFlag = p.changeReq ? '<span style="background:#FFF4E0;color:#B26A00;border:1px solid #F0B860;border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;margin-right:6px">申請調整</span>' : '';
+          h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;' + border + '">';
+          h += '<div style="font-size:14px;font-weight:600">' + esc(p.name) + '</div><div style="display:flex;align-items:center">' + crFlag + badge + '</div>';
+          h += '</div>';
+        });
+        h += '</div></div>';
+      });
+      return h;
+    }
+
+    function renderSchedAdminGrid_() {
+      const grid = schedOverviewData.grid || {};
+      const slots = schedOverviewData.slots || [];
+      const counts = schedOverviewData.counts || {};
+      const period = schedOverviewData.period;
+      const roles = (period && period.openableRoles) ? period.openableRoles : ['IT', 'Rally', '主持'];
+      const byDate = {};
+      slots.forEach(function(s) {
+        if (!byDate[s.date]) byDate[s.date] = [];
+        byDate[s.date].push(s.session);
+      });
+      const dayNames = ['日','一','二','三','四','五','六'];
+      let h = '';
+      const dates = Object.keys(byDate).sort();
+      if (!dates.length) return '<div class="card" style="text-align:center;color:var(--muted);padding:24px">本期尚無排班 slot</div>';
+      // 意願 vs Final 圖例（點 3）
+      h += '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#FDFCF9;border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--muted)">';
+      h += '<span style="display:inline-flex;align-items:center;gap:4px"><span style="background:#E8F5E9;color:#2E7D32;border-radius:4px;padding:1px 6px">意願</span>夥伴自己勾的</span>';
+      h += '<span style="display:inline-flex;align-items:center;gap:4px"><span style="background:var(--teal);color:#FFF;border-radius:4px;padding:1px 6px">✓ Final</span>你最終指派的</span>';
+      h += '<span style="display:inline-flex;align-items:center;gap:4px"><span style="background:#FFF;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:1px 6px">Host</span>預設接待</span>';
+      h += '</div>';
+      h += '<div class="sched-two-col">';
+      dates.forEach(function(date) {
+        const sessions = byDate[date];
+        const d = date.split('-');
+        const dateLabel = parseInt(d[1]) + '/' + parseInt(d[2]);
+        const dayOfWeek = dayNames[new Date(date + 'T00:00:00').getDay()];
+        h += '<div style="margin-bottom:10px;border-radius:12px;overflow:hidden;border:1.5px solid var(--border)">';
+        h += '<div style="background:var(--black);color:var(--yellow);font-size:13px;font-weight:700;padding:9px 14px">' + dateLabel + '（' + dayOfWeek + '）</div>';
+        sessions.forEach(function(sess, si) {
+          const key = date + '|' + sess;
+          const cells = grid[key] || [];
+          const available = cells.filter(function(c) { return c.status === 'available' || c.status === 'assigned'; });
+          const changeReqCells = cells.filter(function(c) { return c.status === 'change_requested'; });
+          const cnt = (counts[key] || { available: available.length, assigned: 0, changeRequested: changeReqCells.length });
+          const border = si < sessions.length-1 ? 'border-bottom:1px solid var(--border);' : '';
+          h += '<div style="padding:10px 14px;background:#FFF;' + border + '">';
+          // 場次標頭 + 人數徽章（點 8）
+          h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">';
+          h += '<span style="font-size:12px;font-weight:700;color:var(--muted)">' + sess + '</span>';
+          h += '<span style="background:var(--yellow);color:var(--black);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700">可服事 ' + cnt.available + '</span>';
+          if (cnt.changeRequested) h += '<span style="background:#FFF4E0;color:#B26A00;border:1px solid #F0B860;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700">申請調整 ' + cnt.changeRequested + '</span>';
+          h += '</div>';
+
+          // 去重（同人同場可能有多列）→ 合併意願、取 adminRole
+          const merged = {};
+          available.forEach(function(c) {
+            const k = c.personRowIndex;
+            if (!merged[k]) merged[k] = { personRowIndex: k, name: c.name, roles: [], adminRole: '' };
+            (c.roles || []).forEach(function(r){ if (r && merged[k].roles.indexOf(r) < 0) merged[k].roles.push(r); });
+            if (c.adminRole && !merged[k].adminRole) merged[k].adminRole = c.adminRole;
+          });
+          const list = Object.keys(merged).map(function(k){ return merged[k]; });
+          const assignedList = list.filter(function(p){ return p.adminRole; });
+          const poolList = list.filter(function(p){ return !p.adminRole; })
+            .sort(function(a, b){ return (b.roles.length>0?1:0) - (a.roles.length>0?1:0); }); // 有意願者優先
+
+          const _qa_ = function(v){ return JSON.stringify(v).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'&quot;'); };
+          const encRoles = _qa_(roles), encDate = _qa_(date), encSess = _qa_(sess);
+          const personRow_ = function(p, isAssigned) {
+            const tap = 'onclick="schedOpenAssign(' + p.personRowIndex + ',' + _qa_(p.name) + ',' + encDate + ',' + encSess + ',' + encRoles + ')"';
+            let inner;
+            if (isAssigned) {
+              inner = '<span style="background:var(--teal);color:#FFF;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;min-width:50px;text-align:center;flex-shrink:0">' + esc(p.adminRole) + '</span>';
+              inner += '<span style="font-size:13px;font-weight:600">' + esc(p.name) + '</span>';
+            } else {
+              inner = '<span style="font-size:13px;font-weight:600">' + esc(p.name) + '</span>';
+              if (p.roles.length) p.roles.forEach(function(r){ inner += '<span style="background:#E8F5E9;color:#2E7D32;border-radius:4px;padding:1px 6px;font-size:11px">' + esc(r) + '</span>'; });
+              else inner += '<span style="color:var(--muted);font-size:12px">Host</span>';
+            }
+            return '<div ' + tap + ' style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;flex-wrap:wrap;' + (isAssigned?'background:#F2F8F7;margin-bottom:3px;':'') + '">' + inner + '<span style="margin-left:auto;color:#CBD5D3;font-size:15px">›</span></div>';
+          };
+
+          if (!list.length) {
+            h += '<div style="font-size:13px;color:#BDBDBD;font-style:italic">無人</div>';
+          } else {
+            if (assignedList.length) {
+              h += '<div style="font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.5px;margin:2px 0 3px">已排定</div>';
+              assignedList.forEach(function(p){ h += personRow_(p, true); });
+            }
+            if (poolList.length) {
+              h += '<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin:' + (assignedList.length?'9px':'2px') + ' 0 3px">Host（接待）</div>';
+              poolList.forEach(function(p){ h += personRow_(p, false); });
+            }
+          }
+          // 申請調整（橘）：顯示名字 + 原因 + 處理鈕（點 4）
+          if (changeReqCells.length) {
+            function _qb_(v){ return JSON.stringify(v).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'&quot;'); }
+            changeReqCells.forEach(function(c) {
+              h += '<div style="display:flex;align-items:flex-start;gap:6px;padding:6px 0;border-top:1px dashed #F0B860;flex-wrap:wrap;background:#FFFBF2">';
+              h += '<span style="background:#FFF4E0;color:#B26A00;border:1px solid #F0B860;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:700">申請調整</span>';
+              h += '<span style="font-size:13px;font-weight:600">' + esc(c.name) + '</span>';
+              if (c.note) h += '<span style="font-size:12px;color:#8A5A12;flex-basis:100%;padding-left:2px">「' + esc(c.note) + '」</span>';
+              h += '<button onclick="schedOpenAssign(' + c.personRowIndex + ',' + _qb_(c.name) + ',' + _qb_(date) + ',' + _qb_(sess) + ',' + _qb_(roles) + ')" style="margin-left:auto;background:none;border:1.5px solid #F0B860;border-radius:6px;padding:2px 8px;font-size:11px;color:#B26A00;cursor:pointer">處理</button>';
+              h += '</div>';
+            });
+          }
+          h += '</div>';
+        });
+        h += '</div>';
+      });
+      h += '</div>'; // close .sched-two-col
+      return h;
+    }
+
+    function schedCopyUnfilled(names) {
+      const text = names.join('\n');
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() { showToast('已複製 ' + names.length + ' 人名單'); }).catch(function() { _fallbackCopy_(text); });
+      } else { _fallbackCopy_(text); }
+    }
+    function _fallbackCopy_(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta); showToast('已複製名單');
+    }
+
+    function schedOpenAssign(rowIndex, name, date, session, roles) {
+      let modal = document.getElementById('schedAssignModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'schedAssignModal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:flex-end;justify-content:center';
+        modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
+        document.body.appendChild(modal);
+      }
+      const dateLabel = date.replace(/^\d+-?(\d+)-(\d+)$/, function(_,m,d){return parseInt(m)+'/'+parseInt(d);});
+      const inner = document.createElement('div');
+      inner.style.cssText = 'background:#FDFCF9;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;box-sizing:border-box';
+      const handle = document.createElement('div');
+      handle.style.cssText = 'width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px';
+      inner.appendChild(handle);
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-size:15px;font-weight:700;margin-bottom:4px';
+      nameEl.textContent = name;
+      inner.appendChild(nameEl);
+      const subEl = document.createElement('div');
+      subEl.style.cssText = 'font-size:13px;color:var(--muted);margin-bottom:16px';
+      subEl.textContent = dateLabel + ' ' + session;
+      inner.appendChild(subEl);
+      const labelEl = document.createElement('div');
+      labelEl.style.cssText = 'font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px';
+      labelEl.textContent = '指派角色';
+      inner.appendChild(labelEl);
+      const btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap';
+      roles.forEach(function(r) {
+        const btn = document.createElement('button');
+        btn.style.cssText = 'flex:1;min-width:72px;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:#FFF;color:var(--black)';
+        btn.textContent = r;
+        btn.onclick = function() { schedAssignRoleAction(rowIndex, date, session, r); };
+        btns.appendChild(btn);
+      });
+      inner.appendChild(btns);
+      // Manager：只能由管理者指派（點 1），夥伴端看不到
+      const mgrBtn = document.createElement('button');
+      mgrBtn.style.cssText = 'width:100%;padding:12px;border:1.5px solid var(--teal);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:#FFF;color:var(--teal);margin-bottom:12px';
+      mgrBtn.textContent = '指派 Manager（管理者專屬）';
+      mgrBtn.onclick = function() { schedAssignRoleAction(rowIndex, date, session, 'Manager'); };
+      inner.appendChild(mgrBtn);
+      const clearBtn = document.createElement('button');
+      clearBtn.style.cssText = 'width:100%;padding:12px;border:1.5px solid #FFCDD2;border-radius:10px;font-size:14px;color:#C62828;background:#FFF;cursor:pointer;margin-bottom:8px';
+      clearBtn.textContent = '清除指派（保留可服事）';
+      clearBtn.onclick = function() { schedAssignRoleAction(rowIndex, date, session, ''); };
+      inner.appendChild(clearBtn);
+      // 取消此人此場：標記不能服事，從名單移除（點 5）
+      const cancelBtn = document.createElement('button');
+      cancelBtn.style.cssText = 'width:100%;padding:12px;border:1.5px solid #E5998A;border-radius:10px;font-size:14px;color:#C05040;background:#FEF0ED;font-weight:600;cursor:pointer';
+      cancelBtn.textContent = '取消此人此場（移出本場）';
+      cancelBtn.onclick = function() { schedCancelAvailabilityAction(rowIndex, name, date, session); };
+      inner.appendChild(cancelBtn);
+      modal.innerHTML = '';
+      modal.appendChild(inner);
+      modal.style.display = 'flex';
+    }
+
+    // 本機更新某格某人的狀態/角色（#3 樂觀更新用），並重算該格人數
+    function schedApplyLocalCell_(date, session, rowIndex, patch) {
+      if (!schedOverviewData || !schedOverviewData.grid) return;
+      const key = date + '|' + session;
+      const cells = schedOverviewData.grid[key];
+      if (cells) {
+        const cell = cells.find(function(c){ return c.personRowIndex === rowIndex; });
+        if (cell) Object.assign(cell, patch);
+      }
+      // 重算 counts[key]
+      let avail = 0, assigned = 0, changeReq = 0;
+      (schedOverviewData.grid[key] || []).forEach(function(c) {
+        const st = String(c.status || '');
+        if (st === 'available' || st === 'assigned') avail++;
+        if (c.adminRole) assigned++;
+        if (st === 'change_requested') changeReq++;
+      });
+      if (!schedOverviewData.counts) schedOverviewData.counts = {};
+      schedOverviewData.counts[key] = { available: avail, assigned: assigned, changeRequested: changeReq };
+    }
+
+    function schedAssignRoleAction(rowIndex, date, session, role) {
+      const modal = document.getElementById('schedAssignModal');
+      if (modal) modal.style.display = 'none';
+      const period = schedOverviewData && schedOverviewData.period;
+      if (!period || !adminToken) { showToast('請先登入 Admin'); return; }
+      // 樂觀更新：就地改該格，不整頁重載，可連續快速指派（#3）
+      schedApplyLocalCell_(date, session, rowIndex, { adminRole: role || '', status: role ? 'assigned' : 'available' });
+      renderScheduleTab(document.getElementById('mainContent'));
+      showToast(role ? '已指派：' + role : '已清除指派');
+      google.script.run
+        .withSuccessHandler(function(r) { if (!r || !r.success) { showToast((r && r.error) || '指派失敗，已重新整理'); schedOverviewRefresh(); } })
+        .withFailureHandler(function(e) { showToast('錯誤，已重新整理: ' + (e.message||e)); schedOverviewRefresh(); })
+        .adminAssignRole(period.periodId, rowIndex, date, session, role, adminToken);
+    }
+
+    // 取消某人某場的可服事（點 5）
+    function schedCancelAvailabilityAction(rowIndex, name, date, session) {
+      const modal = document.getElementById('schedAssignModal');
+      const period = schedOverviewData && schedOverviewData.period;
+      if (!period || !adminToken) { showToast('請先登入 Admin'); return; }
+      if (!confirm('確定把「' + name + '」移出 ' + session + ' 這場嗎？\n會標記為不能服事，從本場名單移除。')) return;
+      if (modal) modal.style.display = 'none';
+      // 樂觀更新：就地標記移除（#3）
+      schedApplyLocalCell_(date, session, rowIndex, { status: 'admin_removed', adminRole: '', roles: [] });
+      renderScheduleTab(document.getElementById('mainContent'));
+      showToast('已將 ' + name + ' 移出本場');
+      google.script.run
+        .withSuccessHandler(function(r) { if (!r || !r.success) { showToast((r && r.error) || '操作失敗，已重新整理'); schedOverviewRefresh(); } })
+        .withFailureHandler(function(e) { showToast('錯誤，已重新整理: ' + (e.message||e)); schedOverviewRefresh(); })
+        .adminCancelAvailability(period.periodId, rowIndex, date, session, adminToken);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        renderNav();
+        loadHistorical();
+      });
+    } else {
+      renderNav();
+      loadHistorical();
+    }
+  </script>
+
+</body>
+</html>
