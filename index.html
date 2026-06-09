@@ -3184,6 +3184,7 @@ function toggleRole() {
       if (!period || !adminToken) { showToast('請先登入 Admin'); return; }
       // 樂觀更新：就地改該格，不整頁重載，可連續快速指派（#3）
       schedApplyLocalCell_(date, session, rowIndex, { adminRole: role || '', status: role ? 'assigned' : 'available' });
+      schedRosterData = null; // 失效「一起服事」名冊快取，下次開該頁重新抓（角色/移除即時反映）
       renderScheduleTab(document.getElementById('mainContent'));
       showToast(role ? '已指派：' + role : '已清除指派');
       google.script.run
@@ -3201,6 +3202,7 @@ function toggleRole() {
       if (modal) modal.style.display = 'none';
       // 樂觀更新：就地標記移除（#3）
       schedApplyLocalCell_(date, session, rowIndex, { status: 'admin_removed', adminRole: '', roles: [] });
+      schedRosterData = null; // 失效「一起服事」名冊快取，下次開該頁重新抓（修 grid 與名冊不同步）
       renderScheduleTab(document.getElementById('mainContent'));
       showToast('已將 ' + name + ' 移出本場');
       google.script.run
