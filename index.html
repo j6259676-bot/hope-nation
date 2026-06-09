@@ -415,6 +415,7 @@
     let expandedNotes = new Set();
     let gatherings = [];
     let dashboardData = null;
+    let dashboardError = null; // 總覽載入失敗時的訊息（取代直接崩潰）
     let dashSessionFilter = 'all';
     let dashRangeMonths = 3;
     let _dashStories = [];
@@ -441,7 +442,7 @@
     }
 
     const staffTabs = ['record', 'search', 'schedule', 'links'];
-    const adminTabs = ['record', 'search', 'gathering', 'dashboard', 'dedupe', 'photo', 'schedule', 'links'];
+    const adminTabs = ['record', 'search', 'gathering', 'dashboard', 'dedupe', 'schedule', 'links']; // 'photo'（合照）暫時隱藏，保留 renderPhotoTab 程式碼供日後啟用
 
     // 去重審核 state
     let dedupeGroups = [];
@@ -984,7 +985,47 @@ function toggleRole() {
     }
 
     // === Dashboard Tab ===
+    function renderDashboardError_(el) {
+      const authIssue = /未授權|重新登入|登入/.test(dashboardError || '');
+      el.replaceChildren();
+      let h = '<div class="card" style="text-align:center;padding:28px;max-width:420px;margin:24px auto">';
+      h += '<div style="font-size:15px;font-weight:800;color:var(--black);margin-bottom:8px">總覽暫時載入不了</div>';
+      h += '<div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px">' + esc(dashboardError || '未知錯誤') + (authIssue ? '<br>（Admin 登入逾時，重新登入即可）' : '') + '</div>';
+      h += '<div style="display:flex;gap:10px;justify-content:center">';
+      if (authIssue) {
+        h += '<button onclick="adminRelogin_()" style="padding:11px 18px;border-radius:11px;border:none;background:var(--black);color:var(--yellow);font-size:14px;font-weight:700;cursor:pointer">重新登入 Admin</button>';
+      }
+      h += '<button onclick="loadDashboard()" style="padding:11px 18px;border-radius:11px;border:1.5px solid var(--border);background:#FFF;color:var(--teal);font-size:14px;font-weight:700;cursor:pointer">重試</button>';
+      h += '</div></div>';
+      el.insertAdjacentHTML('beforeend', h);
+    }
+
+    // 重新登入 Admin（token 逾時用）
+    function adminRelogin_() {
+      try { if (adminToken) google.script.run.adminLogout(adminToken); } catch (e) {}
+      adminToken = ''; isAdmin = false;
+      try { sessionStorage.removeItem('adminToken'); } catch (e) {}
+      const pwd = prompt('請重新輸入 Admin 密碼:');
+      if (!pwd) { renderNav(); return; }
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(r) {
+          hideLoading();
+          if (r && r.success) {
+            adminToken = r.token;
+            try { sessionStorage.setItem('adminToken', adminToken); } catch (e) {}
+            isAdmin = true; dashboardError = null; dashboardData = null;
+            renderNav();
+            showToast('Admin 重新登入成功');
+            if (activeTab === 'dashboard') loadDashboard();
+          } else { showToast((r && r.error) || '登入失敗'); renderNav(); }
+        })
+        .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + ((e && e.message) || e)); renderNav(); })
+        .verifyAdminPassword(pwd);
+    }
+
     function renderDashboardTab(el) {
+      if (dashboardError) { renderDashboardError_(el); return; }
       if (!dashboardData) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">載入中...</div>'; loadDashboard(); return; }
       try {
         const d = dashboardData;
@@ -1186,10 +1227,21 @@ function toggleRole() {
     function setDashRange(v) { dashRangeMonths = parseInt(v); renderDashboardTab(document.getElementById('mainContent')); }
 
     function loadDashboard() {
+      dashboardError = null;
       showLoading();
       const timer = setTimeout(() => { hideLoading(); showToast('載入逾時'); }, 30000);
       google.script.run
-        .withSuccessHandler(function(d) { clearTimeout(timer); hideLoading(); dashboardData = d; renderDashboardTab(document.getElementById('mainContent')); })
+        .withSuccessHandler(function(d) {
+          clearTimeout(timer); hideLoading();
+          // 後端若拋錯（未授權 / 內部錯誤）會回 {success:false,error}，沒有 people 陣列 → 不要直接套進去崩潰
+          if (!d || !Array.isArray(d.people)) {
+            dashboardData = null;
+            dashboardError = (d && d.error) ? String(d.error) : '總覽載入失敗（回傳資料格式異常）';
+            renderDashboardTab(document.getElementById('mainContent'));
+            return;
+          }
+          dashboardError = null; dashboardData = d; renderDashboardTab(document.getElementById('mainContent'));
+        })
         .withFailureHandler(function(e) { clearTimeout(timer); hideLoading(); showToast('錯誤: ' + e.message); document.getElementById('mainContent').innerHTML = '<div style="padding:20px;color:#C00">載入失敗: ' + esc(e.message) + '</div>'; })
         .getDashboardStats(adminToken);
     }
