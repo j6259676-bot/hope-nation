@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Hope Nation 家人們</title>
+  <meta name="apple-mobile-web-app-title" content="Hope Nation 家人們">
+  <meta name="application-name" content="Hope Nation 家人們">
+  <meta name="theme-color" content="#1D292E">
+  <meta name="description" content="The Hope 線上分部服事夥伴工具：家人記錄、服事排班、常用連結">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -471,6 +476,7 @@
     let schedStaffLoading = false;
     let schedAddStaffInput = '';
     let schedStaffSessionFilter = localStorage.getItem('schedStaffSessionFilter') || '全部'; // 名單依場次篩選（點 6）
+    let schedSessionFocus = localStorage.getItem('schedSessionFocus') || '全部'; // 場次焦點：全部/9:30/11:30/2:00，套用我的服事+一起服事+總覽
     let schedShowHelp = localStorage.getItem('schedShowHelp') !== 'false'; // 預設展開
     // Admin 總覽
     let schedRosterData = null;      // 公開名冊 { period, slots, roster }（點 7）
@@ -479,6 +485,9 @@
     let schedOverviewLoading = false;
     let schedOverviewSubView = 'status'; // 'status' | 'grid'
     let schedUnfilledData = null;    // { unfilled: [{rowIndex, name}] }
+    let schedOverviewSig = '';       // 上次總覽資料簽章，poll 比對有無變化用
+    let schedOverviewPollTimer = null; // 總覽自動同步 interval
+    let schedLastLocalEditTs = 0;    // 最近一次本機樂觀編輯時間（poll 暫避，避免蓋掉自己的編輯）
 
     function renderNav() {
       const tabs = isAdmin ? adminTabs : staffTabs;
@@ -505,7 +514,7 @@ function renderTab() {
       else if (activeTab === 'links') renderLinksTab(main);
     }
 
-    function switchTab(tab) { activeTab = tab; renderNav(); }
+    function switchTab(tab) { if (tab !== 'schedule') schedStopOverviewPoll(); activeTab = tab; renderNav(); }
 
 function toggleRole() {
   if (isAdmin) {
@@ -1950,10 +1959,33 @@ function toggleRole() {
         h += '<button onclick="schedSwitchView(\'' + t.key + '\')" style="flex:1;padding:10px;border:none;' + border + 'font-size:14px;font-weight:' + (active?'700':'400') + ';background:' + (active?'var(--black)':'#FFF') + ';color:' + (active?'var(--yellow)':'var(--muted)') + ';cursor:pointer;white-space:nowrap">' + t.label + badge + '</button>';
       });
       h += '</div>';
+      // 場次焦點篩選（各自專注自己的場次）：套用我的服事 / 一起服事 / 總覽
+      if (schedSubView === 'fill' || schedSubView === 'roster' || schedSubView === 'overview') {
+        h += renderSchedSessionFocus_(period);
+      }
       if (schedSubView === 'fill') return h + renderSchedFillView(period);
       if (schedSubView === 'roster') return h + renderSchedRoster();
       if (schedSubView === 'overview') return h + renderSchedAdminOverview();
       return h;
+    }
+
+    // 場次焦點 chip 列（全部 / 各場次）。預設「全部」＝不過濾。
+    function renderSchedSessionFocus_(period) {
+      const sessions = (period && period.sessions) ? period.sessions : ['9:30','11:30','2:00'];
+      const opts = ['全部'].concat(sessions);
+      let h = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap">';
+      h += '<span style="font-size:12px;color:var(--muted);font-weight:700;margin-right:2px">場次</span>';
+      opts.forEach(function(f) {
+        const on = schedSessionFocus === f;
+        h += '<button onclick="schedSetSessionFocus(\'' + f + '\')" style="padding:6px 13px;border-radius:16px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid;' + (on ? 'background:var(--black);color:var(--yellow);border-color:var(--black);' : 'background:#FFF;color:var(--muted);border-color:var(--border);') + '">' + esc(f) + '</button>';
+      });
+      h += '</div>';
+      return h;
+    }
+    function schedSetSessionFocus(f) {
+      schedSessionFocus = f;
+      localStorage.setItem('schedSessionFocus', f);
+      renderScheduleTab(document.getElementById('mainContent'));
     }
 
     function schedToggleHelp() {
@@ -2019,7 +2051,8 @@ function toggleRole() {
       if (!slots || !slots.length) return '<div class="card" style="text-align:center;color:var(--muted);padding:32px">此期間沒有週日場次</div>';
       const allSessions = period.sessions || ['9:30','11:30','2:00'];
       const openRoles   = period.openableRoles || ['IT','Rally','主持'];
-      const showSessions = (schedMyFixedSessions && schedMyFixedSessions.length) ? schedMyFixedSessions : allSessions;
+      let showSessions = (schedMyFixedSessions && schedMyFixedSessions.length) ? schedMyFixedSessions : allSessions;
+      if (schedSessionFocus !== '全部') showSessions = allSessions.filter(function(s){ return s === schedSessionFocus; });
       let h = '';
 
       // ── 已發布橫幅（點 4：發布後改動走申請調整）──
@@ -2387,7 +2420,10 @@ function toggleRole() {
       const roster = schedRosterData.roster || {};
       if (!slots.length) return '<div class="card" style="text-align:center;color:var(--muted);padding:32px">目前沒有排班資料</div>';
       const byDate = {};
-      slots.forEach(function(s) { if (!byDate[s.date]) byDate[s.date] = []; byDate[s.date].push(s.session); });
+      slots.forEach(function(s) {
+        if (schedSessionFocus !== '全部' && s.session !== schedSessionFocus) return; // 場次焦點過濾
+        if (!byDate[s.date]) byDate[s.date] = []; byDate[s.date].push(s.session);
+      });
       const dayNames = ['日','一','二','三','四','五','六'];
       const dates = Object.keys(byDate).sort();
       let h = '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">每個主日各場一起服事的夥伴 ✓ 後是已指派角色</div>';
@@ -2444,9 +2480,11 @@ function toggleRole() {
 
     function schedSwitchView(v) {
       schedSubView = v;
+      if (v !== 'overview') schedStopOverviewPoll(); // 離開總覽停止自動同步
       renderScheduleTab(document.getElementById('mainContent'));
       if (v === 'staff' && !schedStaffList && !schedStaffLoading) schedLoadStaff();
       if (v === 'overview' && !schedOverviewData && !schedOverviewLoading) schedLoadOverview();
+      else if (v === 'overview') schedStartOverviewPoll(); // 已有快取也要恢復輪詢
       if (v === 'roster' && !schedRosterData && !schedRosterLoading) schedLoadRoster();
     }
 
@@ -2603,6 +2641,8 @@ function toggleRole() {
           if (d && d.success) {
             schedOverviewData = { success: true, period: d.period, slots: d.slots, grid: d.grid, counts: d.counts || {}, staffSessions: d.staffSessions || {} };
             schedUnfilledData = { success: true, unfilled: d.unfilled };
+            schedOverviewSig = JSON.stringify({ g: d.grid, c: d.counts, u: d.unfilled });
+            schedStartOverviewPoll();
           } else {
             schedOverviewData = { period: null, slots: [], grid: {} };
             schedUnfilledData = { unfilled: [] };
@@ -2626,6 +2666,41 @@ function toggleRole() {
     function schedOverviewRefresh() {
       schedOverviewData = null; schedUnfilledData = null;
       schedLoadOverview();
+    }
+
+    // ── 自動同步：admin 停在「總覽」時定期靜默重抓，讓其他 admin 的更新自動出現（不必手動重新整理）──
+    function schedStartOverviewPoll() {
+      if (schedOverviewPollTimer) return;
+      schedOverviewPollTimer = setInterval(schedPollOverview_, 20000); // 每 20 秒
+    }
+    function schedStopOverviewPoll() {
+      if (schedOverviewPollTimer) { clearInterval(schedOverviewPollTimer); schedOverviewPollTimer = null; }
+    }
+    function schedPollOverview_() {
+      // 不在總覽 / 非 admin → 停掉
+      if (!isAdmin || !adminToken || activeTab !== 'schedule' || schedSubView !== 'overview') { schedStopOverviewPoll(); return; }
+      if (document.hidden) return;                          // 背景分頁不打 API
+      if (schedOverviewLoading) return;
+      const modal = document.getElementById('schedAssignModal');
+      if (modal && modal.style.display === 'flex') return;  // 指派視窗開著不打擾
+      if (Date.now() - schedLastLocalEditTs < 8000) return; // 自己剛編輯，先讓寫入沉澱再同步
+      google.script.run
+        .withSuccessHandler(function(d) {
+          if (!d || !d.success) return;
+          // 二次確認：回來時仍在總覽、無 modal、非剛編輯，才套用
+          if (activeTab !== 'schedule' || schedSubView !== 'overview') return;
+          const m = document.getElementById('schedAssignModal');
+          if (m && m.style.display === 'flex') return;
+          if (Date.now() - schedLastLocalEditTs < 8000) return;
+          const sig = JSON.stringify({ g: d.grid, c: d.counts, u: d.unfilled });
+          if (sig === schedOverviewSig) return;             // 沒變就不重繪（避免捲動位置跳動）
+          schedOverviewSig = sig;
+          schedOverviewData = { success: true, period: d.period, slots: d.slots, grid: d.grid, counts: d.counts || {}, staffSessions: d.staffSessions || {} };
+          schedUnfilledData = { success: true, unfilled: d.unfilled };
+          renderScheduleTab(document.getElementById('mainContent'));
+        })
+        .withFailureHandler(function() {})
+        .getAdminOverviewAll();
     }
 
     // 發布 / 取消發布 Final 排班（點 4）
@@ -2698,16 +2773,17 @@ function toggleRole() {
         });
       });
       // 整合所有人（含未填）→ {name, home, status, changeReq}
-      const people = [];
-      const changeReq = [];
+      let people = [];
       Object.values(personMap).forEach(function(p) {
-        if (p.hasChangeReq) changeReq.push(p.name);
         const status = p.hasAvailable ? 'filled' : (p.hasUnavailable ? 'unavailable' : 'filled');
         people.push({ name: p.name, home: p.home || '未分場', status: status, changeReq: p.hasChangeReq });
       });
       if (schedUnfilledData && schedUnfilledData.unfilled) {
         schedUnfilledData.unfilled.forEach(function(u) { people.push({ name: u.name, home: u.homeSession || '未分場', status: 'unfilled', changeReq: false }); });
       }
+      // 場次焦點過濾：只看該場（跨場者也納入，因為他也服事這場）
+      if (schedSessionFocus !== '全部') people = people.filter(function(p){ return p.home === schedSessionFocus || p.home === '跨場'; });
+      const changeReq = people.filter(function(p){ return p.changeReq; }).map(function(p){ return p.name; });
       const filledN = people.filter(function(p){return p.status==='filled';}).length;
       const unavailN = people.filter(function(p){return p.status==='unavailable';}).length;
       const unfilledN = people.filter(function(p){return p.status==='unfilled';}).length;
@@ -2775,7 +2851,8 @@ function toggleRole() {
       h += '</div>';
       h += '<div class="sched-two-col">';
       dates.forEach(function(date) {
-        const sessions = byDate[date];
+        const sessions = byDate[date].filter(function(s){ return schedSessionFocus === '全部' || s === schedSessionFocus; });
+        if (!sessions.length) return; // 場次焦點過濾：此主日沒有焦點場次就不顯示
         const d = date.split('-');
         const dateLabel = parseInt(d[1]) + '/' + parseInt(d[2]);
         const dayOfWeek = dayNames[new Date(date + 'T00:00:00').getDay()];
@@ -3185,6 +3262,7 @@ function toggleRole() {
       // 樂觀更新：就地改該格，不整頁重載，可連續快速指派（#3）
       schedApplyLocalCell_(date, session, rowIndex, { adminRole: role || '', status: role ? 'assigned' : 'available' });
       schedRosterData = null; // 失效「一起服事」名冊快取，下次開該頁重新抓（角色/移除即時反映）
+      schedLastLocalEditTs = Date.now(); schedOverviewSig = ''; // 標記剛編輯，並讓下次 poll 必定套用最新
       renderScheduleTab(document.getElementById('mainContent'));
       showToast(role ? '已指派：' + role : '已清除指派');
       google.script.run
@@ -3203,6 +3281,7 @@ function toggleRole() {
       // 樂觀更新：就地標記移除（#3）
       schedApplyLocalCell_(date, session, rowIndex, { status: 'admin_removed', adminRole: '', roles: [] });
       schedRosterData = null; // 失效「一起服事」名冊快取，下次開該頁重新抓（修 grid 與名冊不同步）
+      schedLastLocalEditTs = Date.now(); schedOverviewSig = ''; // 標記剛編輯，並讓下次 poll 必定套用最新
       renderScheduleTab(document.getElementById('mainContent'));
       showToast('已將 ' + name + ' 移出本場');
       google.script.run
@@ -3220,6 +3299,14 @@ function toggleRole() {
       renderNav();
       loadHistorical();
     }
+
+    // 回到前景時，若 admin 正停在排班總覽，立即同步一次（手機切回 app / 切回分頁）
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden && isAdmin && activeTab === 'schedule' && schedSubView === 'overview') {
+        schedStartOverviewPoll();
+        schedPollOverview_();
+      }
+    });
   </script>
 
 </body>
