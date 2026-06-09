@@ -47,11 +47,12 @@
     .header-role.staff { background: rgba(255,255,255,0.1); color: #BBB; }
 
     .nav { background: var(--teal); padding: 0 12px; position: sticky; top: 0; z-index: 100; }
-    .nav-inner { max-width: 540px; margin: 0 auto; display: flex; }
+    .nav-inner { max-width: 540px; margin: 0 auto; display: flex; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .nav-inner::-webkit-scrollbar { display: none; }
     .nav-btn {
-      flex: 1; padding: 14px 0 12px;
+      flex: 1 0 auto; min-width: 62px; padding: 14px 12px 12px;
       border: none; background: none; cursor: pointer;
-      font-size: 15px; font-weight: 400;
+      font-size: 15px; font-weight: 400; white-space: nowrap;
       color: rgba(255,255,255,0.45); letter-spacing: 1px;
       border-bottom: 3px solid transparent; transition: all 0.2s;
       min-height: 48px;
@@ -214,6 +215,49 @@
     }
 
     /* 手機 ≤ 480px 微調 */
+    /* === 常用連結 === */
+    .links-section { margin-bottom: 24px; }
+    .links-section-head { display: flex; align-items: center; gap: 10px; margin: 4px 2px 12px; }
+    .links-section-bar { width: 4px; height: 20px; border-radius: 2px; background: var(--yellow); }
+    .links-section-bar.staff { background: var(--steel); }
+    .links-section-title { font-size: 17px; font-weight: 800; color: var(--teal); letter-spacing: -0.2px; }
+    .links-section-sub { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .links-grid { display: flex; flex-direction: column; gap: 12px; }
+    .link-card {
+      position: relative; background: var(--white); border: 1px solid var(--border);
+      border-radius: 16px; padding: 16px 16px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      display: flex; flex-direction: column;
+    }
+    .link-chip {
+      display: inline-block; font-size: 11px; font-weight: 700; color: var(--steel);
+      background: #EEF2F4; border-radius: 6px; padding: 2px 8px; margin-bottom: 8px; align-self: flex-start;
+    }
+    .link-title { font-size: 16px; font-weight: 800; color: var(--black); line-height: 1.35; }
+    .link-desc { font-size: 13px; color: var(--muted); line-height: 1.55; margin-top: 5px; }
+    .link-actions { display: flex; gap: 8px; margin-top: 13px; }
+    .link-btn {
+      flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 42px; padding: 0 12px; border-radius: 11px; font-size: 14px; font-weight: 700;
+      cursor: pointer; border: 1.5px solid var(--border); background: #FFF; color: var(--teal);
+      text-decoration: none; transition: transform 0.12s;
+    }
+    .link-btn:active { transform: scale(0.97); }
+    .link-btn.primary { background: var(--black); border-color: var(--black); color: var(--yellow); }
+    .link-btn.icon { flex: 0 0 auto; width: 42px; padding: 0; color: var(--steel); }
+    .link-btn svg { width: 17px; height: 17px; }
+    .link-admin { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; }
+    .link-admin button {
+      width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
+      border: none; background: #F5F4F0; border-radius: 8px; color: var(--muted); cursor: pointer;
+    }
+    .link-admin button svg { width: 15px; height: 15px; }
+    .link-add-btn {
+      width: 100%; min-height: 48px; border: 1.5px dashed var(--border); border-radius: 14px;
+      background: #FAFAF7; color: var(--steel); font-size: 14px; font-weight: 700; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px; margin-top: 2px;
+    }
+    .link-add-btn svg { width: 17px; height: 17px; }
+
     @media (max-width: 480px) {
       .main { padding: 14px 14px calc(120px + var(--safe-bottom)); }
       .card { padding: 14px; border-radius: 14px; }
@@ -227,10 +271,12 @@
       .header-inner, .nav-inner, .main { max-width: 760px; }
       .sched-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
       .sched-two-col > * { margin-bottom: 0 !important; }
+      .links-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
     }
     @media (min-width: 1040px) {
       .header-inner, .nav-inner, .main { max-width: 920px; }
       .sched-two-col { grid-template-columns: 1fr 1fr 1fr; }
+      .links-grid { grid-template-columns: 1fr 1fr 1fr; }
     }
 
     /* 防止 input focus 時 iOS 鍵盤頂掉畫面 */
@@ -369,6 +415,11 @@
     let _dashStories = [];
     let historicalValues = { names: [], ytIds: [], countries: [], cities: [], submitters: [] };
 
+    // === 常用連結 state ===
+    let linksData = null;       // getLinks 回傳的 links 陣列
+    let linksLoaded = false;
+    let linksLoading = false;
+
 
     function loadHistorical() {
       google.script.run
@@ -384,8 +435,8 @@
       fill('dl-submitters', historicalValues.submitters);
     }
 
-    const staffTabs = ['record', 'search', 'schedule'];
-    const adminTabs = ['record', 'search', 'gathering', 'dashboard', 'dedupe', 'photo', 'schedule'];
+    const staffTabs = ['record', 'search', 'schedule', 'links'];
+    const adminTabs = ['record', 'search', 'gathering', 'dashboard', 'dedupe', 'photo', 'schedule', 'links'];
 
     // 去重審核 state
     let dedupeGroups = [];
@@ -431,7 +482,7 @@
 
     function renderNav() {
       const tabs = isAdmin ? adminTabs : staffTabs;
-      const labels = { record: '記錄', search: '查詢', gathering: '聚會', dashboard: '總覽', dedupe: '去重', photo: '合照', schedule: '排班' };
+      const labels = { record: '記錄', search: '查詢', gathering: '聚會', dashboard: '總覽', dedupe: '去重', photo: '合照', schedule: '排班', links: '連結' };
       document.getElementById('navBar').innerHTML = tabs.map(t =>
         '<button class="nav-btn ' + (activeTab === t ? 'active' : '') + '" onclick="switchTab(\'' + t + '\')">' + labels[t] + '</button>'
       ).join('');
@@ -451,6 +502,7 @@ function renderTab() {
       else if (activeTab === 'dedupe') renderDedupeTab(main);
       else if (activeTab === 'photo') renderPhotoTab(main);
       else if (activeTab === 'schedule') renderScheduleTab(main);
+      else if (activeTab === 'links') renderLinksTab(main);
     }
 
     function switchTab(tab) { activeTab = tab; renderNav(); }
@@ -2816,6 +2868,233 @@ function toggleRole() {
       ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
       document.body.appendChild(ta); ta.select(); document.execCommand('copy');
       document.body.removeChild(ta); showToast('已複製名單');
+    }
+
+    // ============================================================
+    // 常用連結（服事夥伴中央窗口）
+    // 所有動態值均經 esc() HTML 轉義後組字串，沿用本檔既有渲染慣例。
+    // ============================================================
+    function lucide(name) {
+      const P = {
+        copy: '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+        external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+        edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>',
+        trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+        plus: '<path d="M5 12h14"/><path d="M12 5v14"/>'
+      };
+      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (P[name] || '') + '</svg>';
+    }
+
+    function loadLinks(force) {
+      if (linksLoading) return;
+      if (linksLoaded && !force) { if (activeTab === 'links') renderTab(); return; }
+      linksLoading = true;
+      google.script.run
+        .withSuccessHandler(function(r) {
+          linksLoading = false; linksLoaded = true;
+          linksData = (r && r.success && r.links) ? r.links : [];
+          if (activeTab === 'links') renderTab();
+        })
+        .withFailureHandler(function(e) {
+          linksLoading = false; linksLoaded = true; linksData = [];
+          if (activeTab === 'links') renderTab();
+          showToast('連結載入失敗');
+        })
+        .getLinks();
+    }
+
+    function renderLinksTab(main) {
+      main.replaceChildren();
+      if (!linksLoaded) {
+        if (!linksLoading) loadLinks();
+        main.insertAdjacentHTML('beforeend', '<div class="card" style="text-align:center;color:var(--muted);padding:30px">載入連結中⋯</div>');
+        return;
+      }
+      const links = linksData || [];
+      const share = links.filter(function(l) { return l.group === 'share'; });
+      const staff = links.filter(function(l) { return l.group === 'staff'; });
+      let h = '';
+      h += _renderLinksSection_('share', '分享給家人', '點「複製分享」直接貼給會友', share);
+      h += _renderLinksSection_('staff', '服事工具', '服事時點開即用', staff);
+      main.insertAdjacentHTML('beforeend', h);
+    }
+
+    function linkOpenEditor(id, presetGroup) {
+      const l = id ? _findLink_(id) : null;
+      linkEditorId = id || null;
+      linkEditorGroup = l ? l.group : (presetGroup || 'share');
+      let modal = document.getElementById('linkEditorModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'linkEditorModal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:flex-end;justify-content:center';
+        modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
+        document.body.appendChild(modal);
+      }
+      const v = l || { subcategory: '', title: '', url: '', description: '', shareText: '' };
+      modal.replaceChildren();
+      modal.insertAdjacentHTML('beforeend', _buildLinkEditorHtml_(id, v, _existingSubcats_()));
+      modal.style.display = 'flex';
+      linkEditorSetGroup(linkEditorGroup);
+    }
+
+    function _renderLinksSection_(group, title, sub, items) {
+      let h = '<div class="links-section">';
+      h += '<div class="links-section-head"><div class="links-section-bar ' + (group === 'staff' ? 'staff' : '') + '"></div>';
+      h += '<div class="links-section-title">' + esc(title) + '</div>';
+      h += '<div class="links-section-sub">' + esc(sub) + '</div></div>';
+      if (!items.length && !isAdmin) {
+        h += '<div class="card" style="color:var(--muted);font-size:13px">尚未有連結</div>';
+      } else if (items.length) {
+        h += '<div class="links-grid">';
+        items.forEach(function(l) { h += _renderLinkCard_(l); });
+        h += '</div>';
+      }
+      if (isAdmin) {
+        h += '<button class="link-add-btn" onclick="linkOpenEditor(null,\'' + group + '\')">' + lucide('plus') + '新增連結</button>';
+      }
+      h += '</div>';
+      return h;
+    }
+
+    function _renderLinkCard_(l) {
+      const safeId = esc(l.id);
+      const url = esc(l.url);
+      let h = '<div class="link-card">';
+      if (isAdmin) {
+        h += '<div class="link-admin">'
+          + '<button onclick="linkOpenEditor(\'' + safeId + '\')" aria-label="編輯">' + lucide('edit') + '</button>'
+          + '<button onclick="linkDelete(\'' + safeId + '\')" aria-label="刪除">' + lucide('trash') + '</button>'
+          + '</div>';
+      }
+      if (l.subcategory) h += '<div class="link-chip">' + esc(l.subcategory) + '</div>';
+      h += '<div class="link-title"' + (isAdmin ? ' style="padding-right:64px"' : '') + '>' + esc(l.title) + '</div>';
+      if (l.description) h += '<div class="link-desc">' + esc(l.description) + '</div>';
+      h += '<div class="link-actions">';
+      if (l.group === 'share') {
+        h += '<button class="link-btn primary" onclick="linkCopyShare(\'' + safeId + '\')">' + lucide('copy') + '複製分享</button>';
+        h += '<a class="link-btn icon" href="' + url + '" target="_blank" rel="noopener" aria-label="開啟">' + lucide('external') + '</a>';
+      } else {
+        h += '<a class="link-btn primary" href="' + url + '" target="_blank" rel="noopener">' + lucide('external') + '開啟</a>';
+        h += '<button class="link-btn icon" onclick="linkCopyUrl(\'' + safeId + '\')" aria-label="複製連結">' + lucide('copy') + '</button>';
+      }
+      h += '</div></div>';
+      return h;
+    }
+
+    function _findLink_(id) { return (linksData || []).filter(function(l) { return l.id === id; })[0] || null; }
+
+    function linkCopyShare(id) {
+      const l = _findLink_(id); if (!l) return;
+      const t = (l.shareText && l.shareText.trim()) ? l.shareText : (l.title + '\n' + l.url);
+      linkCopy_(t, '已複製，可貼給家人');
+    }
+    function linkCopyUrl(id) {
+      const l = _findLink_(id); if (!l) return;
+      linkCopy_(l.url, '已複製連結');
+    }
+    function linkCopy_(text, okMsg) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() { showToast(okMsg); }).catch(function() { _fallbackCopyMsg_(text, okMsg); });
+      } else { _fallbackCopyMsg_(text, okMsg); }
+    }
+    function _fallbackCopyMsg_(text, okMsg) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta); showToast(okMsg || '已複製');
+    }
+
+    // === Admin 編輯 ===
+    let linkEditorId = null;
+    let linkEditorGroup = 'share';
+
+    function _existingSubcats_() {
+      const set = {};
+      (linksData || []).forEach(function(l) { if (l.subcategory) set[l.subcategory] = 1; });
+      return Object.keys(set);
+    }
+    function _linkField_(label, control) {
+      return '<div style="margin-bottom:14px"><div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px">' + label + '</div>' + control + '</div>';
+    }
+
+    function _buildLinkEditorHtml_(id, v, subcats) {
+      let h = '<div style="background:#FDFCF9;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:540px;box-sizing:border-box;max-height:90vh;overflow-y:auto">';
+      h += '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>';
+      h += '<div style="font-size:17px;font-weight:800;margin-bottom:16px">' + (id ? '編輯連結' : '新增連結') + '</div>';
+      h += '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px">分類</div>';
+      h += '<div style="display:flex;gap:8px;margin-bottom:14px">'
+        + '<button type="button" id="linkGrpShare" onclick="linkEditorSetGroup(\'share\')">會友分享</button>'
+        + '<button type="button" id="linkGrpStaff" onclick="linkEditorSetGroup(\'staff\')">服事夥伴專屬</button>'
+        + '</div>';
+      h += _linkField_('子分類（選填）', '<input id="linkF_sub" class="input" list="dl-linksubcat" value="' + esc(v.subcategory) + '" placeholder="例：報名、表單、會議">');
+      h += '<datalist id="dl-linksubcat">' + subcats.map(function(s) { return '<option value="' + esc(s) + '">'; }).join('') + '</datalist>';
+      h += _linkField_('標題', '<input id="linkF_title" class="input" value="' + esc(v.title) + '" placeholder="連結名稱">');
+      h += _linkField_('網址', '<input id="linkF_url" class="input" value="' + esc(v.url) + '" placeholder="https://" inputmode="url">');
+      h += _linkField_('說明（服事夥伴看的，幫助理解這是什麼）', '<textarea id="linkF_desc" class="input" rows="2" style="resize:vertical">' + esc(v.description) + '</textarea>');
+      h += _linkField_('複製分享內容（留空＝自動用 標題＋網址）', '<textarea id="linkF_share" class="input" rows="3" style="resize:vertical" placeholder="按「複製分享」時會複製這段文字給會友">' + esc(v.shareText) + '</textarea>');
+      h += '<div style="display:flex;gap:10px;margin-top:8px">';
+      h += '<button onclick="document.getElementById(\'linkEditorModal\').style.display=\'none\'" style="flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:#FFF;font-size:15px;font-weight:700;cursor:pointer">取消</button>';
+      h += '<button onclick="linkSubmitEditor()" style="flex:1;padding:13px;border-radius:12px;border:none;background:var(--black);color:var(--yellow);font-size:15px;font-weight:700;cursor:pointer">' + (id ? '儲存' : '新增') + '</button>';
+      h += '</div></div>';
+      return h;
+    }
+
+    function linkEditorSetGroup(g) {
+      linkEditorGroup = g;
+      const s = document.getElementById('linkGrpShare');
+      const t = document.getElementById('linkGrpStaff');
+      if (!s || !t) return;
+      const base = 'flex:1;padding:11px;border-radius:10px;border:1.5px solid;font-weight:700;cursor:pointer;';
+      const on = 'border-color:var(--black);background:var(--black);color:var(--yellow)';
+      const off = 'border-color:var(--border);background:#FFF;color:var(--black)';
+      s.style.cssText = base + (g === 'share' ? on : off);
+      t.style.cssText = base + (g === 'staff' ? on : off);
+    }
+
+    function linkSubmitEditor() {
+      const title = document.getElementById('linkF_title').value.trim();
+      const url = document.getElementById('linkF_url').value.trim();
+      if (!title) { showToast('請填標題'); return; }
+      if (!url) { showToast('請填網址'); return; }
+      const payload = {
+        group: linkEditorGroup,
+        subcategory: document.getElementById('linkF_sub').value.trim(),
+        title: title, url: url,
+        description: document.getElementById('linkF_desc').value.trim(),
+        shareText: document.getElementById('linkF_share').value
+      };
+      showLoading();
+      const done = function(r) {
+        hideLoading();
+        if (r && r.success) {
+          const m = document.getElementById('linkEditorModal'); if (m) m.style.display = 'none';
+          showToast(linkEditorId ? '已儲存' : '已新增');
+          loadLinks(true);
+        } else {
+          showToast((r && r.error) || '操作失敗');
+        }
+      };
+      const fail = function(e) { hideLoading(); showToast('操作失敗：' + ((e && e.message) || '')); };
+      if (linkEditorId) {
+        google.script.run.withSuccessHandler(done).withFailureHandler(fail).updateLink(linkEditorId, payload, adminToken);
+      } else {
+        google.script.run.withSuccessHandler(done).withFailureHandler(fail).addLink(payload, adminToken);
+      }
+    }
+
+    function linkDelete(id) {
+      const l = _findLink_(id); if (!l) return;
+      if (!confirm('確定刪除「' + l.title + '」?')) return;
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(r) {
+          hideLoading();
+          if (r && r.success) { showToast('已刪除'); loadLinks(true); }
+          else showToast((r && r.error) || '刪除失敗');
+        })
+        .withFailureHandler(function(e) { hideLoading(); showToast('刪除失敗'); })
+        .deleteLink(id, adminToken);
     }
 
     function schedOpenAssign(rowIndex, name, date, session, roles) {
