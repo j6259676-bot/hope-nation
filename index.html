@@ -1803,13 +1803,13 @@ function toggleRole() {
                 photoState = 'idle'; renderPhotoTab(document.getElementById('mainContent'));
                 showToast('配對失敗：' + e.message);
               })
-              .matchZoomTiles(parseResult.tiles);
+              .matchZoomTiles(parseResult.tiles, adminToken);
           })
           .withFailureHandler(function(e) {
             photoState = 'idle'; renderPhotoTab(document.getElementById('mainContent'));
             showToast('解析失敗：' + e.message);
           })
-          .parseZoomScreenshot(resized);
+          .parseZoomScreenshot(resized, adminToken);
       };
       img.src = base64;
     }
