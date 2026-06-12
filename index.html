@@ -497,6 +497,8 @@
     let schedSubView = 'fill';  // 'fill' | 'mine'
     let schedACInput = '';
     let schedACResults = [];
+    let schedStaffNames = null;        // 在職夥伴全名單（一次載入，本機過濾，取代逐字打 API）
+    let schedStaffNamesLoading = false;
     let schedPending = {};      // 待送出的 entries batch
     let schedBatchTimer = null;
     let schedLoading = false;
@@ -2044,27 +2046,65 @@ function toggleRole() {
     function renderSchedPersonPicker() {
       // ⚠️ input 本身不在 innerHtml 裡更新 — 只建一次，之後只更新 #schedACResults
       // 這樣 IME 組字狀態不會被清掉
+      if (!schedStaffNames && !schedStaffNamesLoading) schedLoadStaffNames();
       let h = '<div class="card">';
       h += '<div style="font-size:15px;font-weight:700;margin-bottom:4px">找到你的名字</div>';
-      h += '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">輸入姓名搜尋，選取自己開始填寫</div>';
-      h += '<input class="input" id="schedACInput" type="search" placeholder="輸入姓名..." autocomplete="off" autocorrect="off" spellcheck="false" oninput="if(!event.isComposing)schedACSearch(this.value)" oncompositionend="schedACSearch(this.value)" style="margin-bottom:10px">';
+      h += '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">直接點下方你的名字，或輸入文字快速過濾</div>';
+      h += '<input class="input" id="schedACInput" type="search" placeholder="輸入名字過濾..." autocomplete="off" autocorrect="off" spellcheck="false" oninput="schedACSearch(this.value)" oncompositionend="schedACSearch(this.value)" style="margin-bottom:12px">';
       h += '<div id="schedACResults"></div>';
       h += '</div>';
       return h;
     }
 
+    // 一次載入全名單（之後過濾都在本機，零延遲；後端有 5 分鐘快取）
+    function schedLoadStaffNames() {
+      schedStaffNamesLoading = true;
+      google.script.run
+        .withSuccessHandler(function(r) {
+          schedStaffNamesLoading = false;
+          schedStaffNames = (r && r.success && r.staff) ? r.staff : [];
+          _schedRenderResults_();
+        })
+        .withFailureHandler(function() {
+          schedStaffNamesLoading = false;
+          schedStaffNames = [];
+          _schedRenderResults_();
+        })
+        .getStaffNames();
+    }
+
     function _schedRenderResults_() {
       const el = document.getElementById('schedACResults');
       if (!el) return;
-      let h = '';
-      schedACResults.forEach(function(p) {
-        const av = '<div style="width:40px;height:40px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--yellow);flex-shrink:0">' + esc((p.name||'?')[0]) + '</div>';
-        h += '<div onclick="schedSelectPerson(' + p.rowIndex + ',\'' + esc(p.name).replace(/\'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;cursor:pointer;border:1.5px solid var(--border);margin-bottom:8px;background:#FDFCF9">' + av + '<div style="font-size:15px;font-weight:700">' + esc(p.name) + '</div></div>';
-      });
-      if (schedACResults.length === 0 && schedACInput.length >= 2) {
-        h = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">找不到符合的人名<br><span style="font-size:12px">如果你是第一次使用，請聯絡管理者將你的名字加入名單</span></div>';
+      el.replaceChildren();
+      if (!schedStaffNames) {
+        el.insertAdjacentHTML('beforeend', '<div style="color:var(--muted);font-size:13px;text-align:center;padding:14px">載入名單中…</div>');
+        return;
       }
-      el.innerHTML = h;
+      const q = schedACInput.trim().toLowerCase();
+      const list = q ? schedStaffNames.filter(function(p){ return p.name.toLowerCase().indexOf(q) >= 0; }) : schedStaffNames.slice();
+      if (!list.length) {
+        el.insertAdjacentHTML('beforeend', '<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">名單上找不到「' + esc(schedACInput.trim()) + '」<br><span style="font-size:12px">請聯絡管理者確認你的名字有在服事夥伴名單中</span></div>');
+        return;
+      }
+      const byName = function(a, b){ return a.name.localeCompare(b.name, 'zh-TW'); };
+      const chip = function(p) {
+        return '<button onclick="schedSelectPerson(' + p.rowIndex + ',\'' + esc(p.name).replace(/\'/g, "\\'") + '\')" style="padding:11px 16px;border-radius:22px;border:1.5px solid var(--border);background:#FDFCF9;font-size:14px;font-weight:600;color:var(--black);cursor:pointer;min-height:44px">' + esc(p.name) + '</button>';
+      };
+      let h = '';
+      if (q) {
+        // 有過濾文字：平鋪顯示符合者
+        h += '<div style="display:flex;flex-wrap:wrap;gap:8px">' + list.sort(byName).map(chip).join('') + '</div>';
+      } else {
+        // 無過濾：依主要場次分組，直接點選
+        ['9:30', '11:30', '2:00', '跨場', ''].forEach(function(g) {
+          const sub = list.filter(function(p){ return (p.homeSession || '') === g; }).sort(byName);
+          if (!sub.length) return;
+          h += '<div style="font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 6px;letter-spacing:.3px">' + (g || '未分場') + '<span style="font-weight:400"> · ' + sub.length + ' 位</span></div>';
+          h += '<div style="display:flex;flex-wrap:wrap;gap:8px">' + sub.map(chip).join('') + '</div>';
+        });
+      }
+      el.insertAdjacentHTML('beforeend', h);
     }
 
     function renderSchedMain() {
@@ -2496,11 +2536,9 @@ function toggleRole() {
       el.innerHTML = html;
       if (!schedPersonRow && schedSubView !== 'staff') {
         const inp = document.getElementById('schedACInput');
-        if (inp) {
-          if (schedACInput) inp.value = schedACInput; // 還原上次輸入
-          inp.focus();
-        }
-        _schedRenderResults_(); // 還原已有的搜尋結果
+        if (inp && schedACInput) inp.value = schedACInput; // 還原上次輸入
+        // 不自動 focus：主要互動是「直接點名字」，鍵盤彈出會蓋住名單
+        _schedRenderResults_(); // 渲染名單（載入中/分組 chips/過濾結果）
       } else if (schedSubView !== 'staff' && schedSubView !== 'overview' && !schedViewData && !schedLoading) {
         schedLoadView();
       }
@@ -2589,13 +2627,11 @@ function toggleRole() {
       return h;
     }
 
+    // 純本機過濾（名單已載入），每個 input 事件都即時反應；
+    // 不再依賴 isComposing/compositionend 時機，修掉部分輸入法搜尋不觸發的問題
     function schedACSearch(val) {
-      schedACInput = val;
-      if (val.length < 2) { schedACResults = []; _schedRenderResults_(); return; }
-      google.script.run
-        .withSuccessHandler(function(items) { schedACResults = items || []; _schedRenderResults_(); })
-        .withFailureHandler(function() { schedACResults = []; _schedRenderResults_(); })
-        .getStaffSuggestions(val);
+      schedACInput = String(val || '');
+      _schedRenderResults_();
     }
 
     function schedSelectPerson(rowIndex, name) {
