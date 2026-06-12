@@ -12,6 +12,9 @@
   <meta name="application-name" content="Hope Nation 家人們">
   <meta name="theme-color" content="#1D292E">
   <meta name="description" content="The Hope 線上分部服事夥伴工具：家人記錄、服事排班、常用連結">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -336,12 +339,36 @@
       // 正式後端 = 生產部署（結尾 ...b0lJDI6xbFg，@62 起含 router + 常用連結模組，匿名可存取）
       var API_BASE = 'https://script.google.com/macros/s/AKfycbzDjGaJylgflAuVjHW0rWJUEJWDm8VfV5iHRdzTBtCZ7RLMQTfupXDRi7_b0lJDI6xbFg/exec';
 
+      // === 存取金鑰（金鑰連結模式）===
+      // URL ?k= → localStorage 記住 → 之後每次 API 呼叫都帶上；
+      // 帶 k 開啟後立刻把金鑰從網址移除（截圖/分享網址不外洩）
+      var staffKey = '';
+      try {
+        var km = location.search.match(/[?&]k=([^&]+)/);
+        if (km) {
+          staffKey = decodeURIComponent(km[1]);
+          localStorage.setItem('staffKey', staffKey);
+          history.replaceState(null, '', location.pathname);
+        } else {
+          staffKey = localStorage.getItem('staffKey') || '';
+        }
+      } catch (e) {}
+      window._setStaffKey_ = function (k) {
+        staffKey = String(k || '').trim();
+        try { localStorage.setItem('staffKey', staffKey); } catch (e) {}
+      };
+
       function callBackend(name, args) {
         return fetch(API_BASE, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 簡單請求，避開 CORS preflight
-          body: JSON.stringify({ action: name, args: args || [] })
-        }).then(function (r) { return r.json(); });
+          body: JSON.stringify({ action: name, args: args || [], k: staffKey })
+        }).then(function (r) { return r.json(); })
+          .then(function (res) {
+            // 後端金鑰閘門擋下 → 顯示引導頁（函式宣告在下方，呼叫時已存在）
+            if (res && res.needKey && typeof showKeyGate === 'function') showKeyGate();
+            return res;
+          });
       }
 
       function makeRunner() {
@@ -561,6 +588,58 @@ function toggleRole() {
     function showLoading() { document.getElementById('loading').classList.remove('hidden'); }
     function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
 
+    // ===== 金鑰引導頁（後端回 needKey 時顯示，蓋住整個畫面；內容全靜態無使用者輸入）=====
+    function showKeyGate() {
+      if (document.getElementById('keyGate')) return;
+      hideLoading();
+      const d = document.createElement('div');
+      d.id = 'keyGate';
+      d.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px';
+      let h = '<div style="max-width:380px;width:100%">';
+      h += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px"><div style="width:4px;height:32px;background:var(--yellow);border-radius:2px"></div><div><div style="font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--yellow-dark);font-weight:700">The Hope</div><div style="font-size:20px;font-weight:900;color:var(--black)">Hope Nation 家人們</div></div></div>';
+      h += '<div class="card" style="padding:20px">';
+      h += '<div style="font-size:16px;font-weight:800;margin-bottom:6px">需要專屬連結</div>';
+      h += '<div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">為保護家人們的個人資料，這個工具需要透過<b>管理者提供的專屬連結</b>開啟。如果你收過連結，重新點一次即可；或把連結貼在下方。</div>';
+      h += '<input class="input" id="keyGateInput" placeholder="貼上專屬連結或金鑰" style="margin-bottom:10px">';
+      h += '<button class="btn-primary" onclick="keyGateSubmit()" style="margin-bottom:14px">確認</button>';
+      h += '<div style="border-top:1px solid var(--border-light);padding-top:12px;text-align:center">';
+      h += '<button onclick="keyGateAdmin()" style="background:none;border:none;color:var(--steel);font-size:13px;font-weight:700;cursor:pointer;padding:6px 10px">我是管理者，用密碼登入取得連結</button>';
+      h += '</div></div></div>';
+      d.insertAdjacentHTML('beforeend', h);
+      document.body.appendChild(d);
+    }
+
+    function keyGateSubmit() {
+      const v = (document.getElementById('keyGateInput').value || '').trim();
+      if (!v) { showToast('請貼上連結或金鑰'); return; }
+      const m = v.match(/[?&]k=([^&\s]+)/);
+      window._setStaffKey_(m ? decodeURIComponent(m[1]) : v);
+      location.reload(); // 金鑰錯誤的話 reload 後會再次出現引導頁
+    }
+
+    // 管理者 bootstrap：沒金鑰也能先登入（verifyAdminPassword 豁免），再取金鑰
+    function keyGateAdmin() {
+      const pwd = prompt('請輸入 Admin 密碼:');
+      if (!pwd) return;
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (!r || !r.success) { hideLoading(); showToast((r && r.error) || '登入失敗'); return; }
+          adminToken = r.token;
+          try { sessionStorage.setItem('adminToken', adminToken); } catch(e) {}
+          google.script.run
+            .withSuccessHandler(function(info) {
+              hideLoading();
+              if (info && info.success) { window._setStaffKey_(info.key); location.reload(); }
+              else showToast('取得金鑰失敗');
+            })
+            .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + (e.message||e)); })
+            .getStaffAccessInfo(adminToken);
+        })
+        .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + (e.message||e)); })
+        .verifyAdminPassword(pwd);
+    }
+
     function openPhotoLightbox(url) {
       let overlay = document.getElementById('lightboxOverlay');
       if (!overlay) {
@@ -641,7 +720,7 @@ function toggleRole() {
     }
     function sessionTagHTML(s) { if (!s) return ''; return '<span class="session-tag session-tag-' + getSessionClass(s) + '">' + s + '</span>'; }
     const FLAGS = {"台灣":"🇹🇼","美國":"🇺🇸","日本":"🇯🇵","韓國":"🇰🇷","菲律賓":"🇵🇭","越南":"🇻🇳","香港":"🇭🇰","新加坡":"🇸🇬","印尼":"🇮🇩","印度":"🇮🇳","馬來西亞":"🇲🇾","泰國":"🇹🇭","中國":"🇨🇳","China":"🇨🇳","Taiwan":"🇹🇼"};
-    function getFlag(c) { return FLAGS[c] || '🌍'; }
+    function getFlag(c) { return FLAGS[c] || ''; } // 未知國家不顯示圖示（設計規則：不用 emoji 當圖示；國旗為資料保留）
     function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
     function compressImage(dataUrl, maxWidth, quality, callback) {
       const img = new Image();
@@ -794,7 +873,7 @@ function toggleRole() {
               }
             } else html += '<div style="color:#CCC;font-size:13px">尚無近況紀錄</div>';
             if (isAdmin) {
-              html += '<button onclick="event.stopPropagation();openEditPerson(' + idx + ')" style="width:100%;margin-top:10px;padding:10px;background:none;border:1.5px solid var(--teal);border-radius:10px;color:var(--teal);font-size:13px;font-weight:700;cursor:pointer">✏️ 編輯資料</button>';
+              html += '<button onclick="event.stopPropagation();openEditPerson(' + idx + ')" style="width:100%;margin-top:10px;padding:10px;background:none;border:1.5px solid var(--teal);border-radius:10px;color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px">' + lucide('edit', 14) + '編輯資料</button>';
             }
             html += '</div>';
           }
@@ -1454,7 +1533,7 @@ function toggleRole() {
 
       if (dedupeGroups.length === 0) {
         el.innerHTML = '<div style="padding:40px 16px;text-align:center">' +
-          '<div style="font-size:48px;margin-bottom:16px">✅</div>' +
+          '<div style="margin-bottom:16px;color:#2E7D32">' + lucide('check-circle', 48) + '</div>' +
           '<div style="font-size:20px;font-weight:900;margin-bottom:8px">沒有待審核組別</div>' +
           '<div style="color:var(--muted);font-size:14px">所有重複都已處理完畢</div>' +
           '<button class="btn-primary" style="margin-top:24px;max-width:200px" onclick="dedupeReload()">重新掃描</button>' +
@@ -1730,7 +1809,7 @@ function toggleRole() {
         + '<div style="font-size:16px;font-weight:700;margin-bottom:8px">上傳 Zoom 截圖</div>'
         + '<div style="font-size:13px;color:#9A9690;margin-bottom:16px">上傳聚會的大合照截圖，AI 自動辨識每位開鏡頭的家人，配對到 Hope Nation 記錄</div>'
         + '<label style="display:block;border:2px dashed #D4A82E;border-radius:12px;padding:32px 16px;text-align:center;cursor:pointer;background:#FDF6E0">'
-        + '<div style="font-size:28px;margin-bottom:8px">&#128247;</div>'
+        + '<div style="margin-bottom:8px;color:#D4A82E">' + lucide('camera', 28) + '</div>'
         + '<div style="font-size:14px;color:#D4A82E;font-weight:700">點此選擇截圖</div>'
         + '<div style="font-size:12px;color:#AAA;margin-top:4px">支援 JPG、PNG</div>'
         + '<input type="file" accept="image/*" style="display:none" onchange="photoUploadFile(this)">'
@@ -1741,7 +1820,7 @@ function toggleRole() {
 
     function _photoDoneHTML() {
       return '<div class="card" style="text-align:center;padding:32px">'
-        + '<div style="font-size:32px;margin-bottom:12px">&#9989;</div>'
+        + '<div style="margin-bottom:12px;color:#2E7D32">' + lucide('check-circle', 32) + '</div>'
         + '<div style="font-size:16px;font-weight:700;margin-bottom:8px">完成！</div>'
         + '<div style="font-size:13px;color:#9A9690;margin-bottom:20px">照片已寫入 Hope Nation</div>'
         + '<button onclick="photoReset()" style="padding:12px 24px;background:#1D292E;border:none;border-radius:10px;font-size:14px;font-weight:700;color:#F2C94C;cursor:pointer">再上傳一張</button>'
@@ -1994,7 +2073,7 @@ function toggleRole() {
       if (schedSubView === 'staff') return h + renderSchedAdminStaff();
       if (!schedViewData) { return h + (schedLoading ? '<div style="text-align:center;padding:40px;color:var(--muted)">載入中…</div>' : '<div style="text-align:center;padding:40px;color:var(--muted)">載入失敗，請重新整理</div>'); }
       const period = schedViewData.period;
-      if (!period) { return h + '<div class="card" style="text-align:center;color:var(--muted);padding:32px"><div style="font-size:20px;margin-bottom:8px">📋</div><div>目前沒有開放的排班期別</div></div>'; }
+      if (!period) { return h + '<div class="card" style="text-align:center;color:var(--muted);padding:32px"><div style="margin-bottom:8px">' + lucide('calendar', 28) + '</div><div>目前沒有開放的排班期別</div></div>'; }
       h += '<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px">' + period.startDate + ' — ' + period.endDate + '</div>';
       const tabs = [
         { key:'fill', label:'我的服事' },
@@ -2241,7 +2320,7 @@ function toggleRole() {
         const e = schedLocalEntries[slot.date+'|'+slot.session];
         if (e && (e.adminRole || (e.status==='assigned' && e.roles && e.roles.length))) assigned.push({ date: slot.date, session: slot.session, adminRole: e.adminRole||'', roles: e.roles||[] });
       });
-      if (!assigned.length) return '<div class="card" style="text-align:center;color:var(--muted);padding:32px"><div style="font-size:20px;margin-bottom:8px">📅</div><div>尚未指派服事</div><div style="font-size:12px;margin-top:4px">管理者指派後會顯示在這裡</div></div>';
+      if (!assigned.length) return '<div class="card" style="text-align:center;color:var(--muted);padding:32px"><div style="margin-bottom:8px">' + lucide('calendar', 28) + '</div><div>尚未指派服事</div><div style="font-size:12px;margin-top:4px">管理者指派後會顯示在這裡</div></div>';
       return assigned.map(function(a) {
         const rt = a.adminRole || (a.roles.length ? a.roles.join(' · ') : '服事');
         return '<div class="card" style="display:flex;align-items:center;gap:12px;padding:14px"><div style="width:44px;height:44px;border-radius:10px;background:var(--yellow);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">' + a.session + '</div><div><div style="font-size:14px;font-weight:700;color:var(--teal)">' + schedFmtDate(a.date) + '（日）</div><div style="font-size:13px;color:var(--muted);margin-top:2px">' + esc(rt) + '</div></div></div>';
@@ -2853,7 +2932,7 @@ function toggleRole() {
       if (!people.length) return h + '<div class="card" style="text-align:center;color:var(--muted);padding:24px">尚無服事夥伴資料</div>';
 
       // ── 依場次分組顯示誰已填／未填（#1）──
-      const _qaU_ = function(v){ return JSON.stringify(v).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'&quot;'); };
+      const _qaU_ = function(v){ return JSON.stringify(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
       const sortName = function(a, b){ return a.name.localeCompare(b.name, 'zh-TW'); };
       ['9:30','11:30','2:00','跨場','未分場'].forEach(function(sessName) {
         const group = people.filter(function(p){ return p.home === sessName; }).sort(sortName);
@@ -2940,7 +3019,7 @@ function toggleRole() {
           const poolList = list.filter(function(p){ return !p.adminRole; })
             .sort(function(a, b){ return (b.roles.length>0?1:0) - (a.roles.length>0?1:0); }); // 有意願者優先
 
-          const _qa_ = function(v){ return JSON.stringify(v).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'&quot;'); };
+          const _qa_ = function(v){ return JSON.stringify(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
           const encRoles = _qa_(roles), encDate = _qa_(date), encSess = _qa_(sess);
           const personRow_ = function(p, isAssigned) {
             const tap = 'onclick="schedOpenAssign(' + p.personRowIndex + ',' + _qa_(p.name) + ',' + encDate + ',' + encSess + ',' + encRoles + ')"';
@@ -2970,7 +3049,7 @@ function toggleRole() {
           }
           // 申請調整（橘）：顯示名字 + 原因 + 處理鈕（點 4）
           if (changeReqCells.length) {
-            function _qb_(v){ return JSON.stringify(v).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'&quot;'); }
+            function _qb_(v){ return JSON.stringify(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
             changeReqCells.forEach(function(c) {
               h += '<div style="display:flex;align-items:flex-start;gap:6px;padding:6px 0;border-top:1px dashed #F0B860;flex-wrap:wrap;background:#FFFBF2">';
               h += '<span style="background:#FFF4E0;color:#B26A00;border:1px solid #F0B860;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:700">申請調整</span>';
@@ -3005,15 +3084,19 @@ function toggleRole() {
     // 常用連結（服事夥伴中央窗口）
     // 所有動態值均經 esc() HTML 轉義後組字串，沿用本檔既有渲染慣例。
     // ============================================================
-    function lucide(name) {
+    function lucide(name, size) {
       const P = {
         copy: '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
         external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
         edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>',
         trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
-        plus: '<path d="M5 12h14"/><path d="M12 5v14"/>'
+        plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+        calendar: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+        'check-circle': '<path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/>',
+        camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>'
       };
-      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (P[name] || '') + '</svg>';
+      const s = size ? ' style="width:' + size + 'px;height:' + size + 'px"' : '';
+      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' + s + '>' + (P[name] || '') + '</svg>';
     }
 
     function loadLinks(force) {
@@ -3045,6 +3128,12 @@ function toggleRole() {
       const share = links.filter(function(l) { return l.group === 'share'; });
       const staff = links.filter(function(l) { return l.group === 'staff'; });
       let h = '';
+      if (isAdmin) {
+        h += '<div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:16px">';
+        h += '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800">夥伴專用連結</div><div style="font-size:12px;color:var(--muted);margin-top:2px">含存取金鑰，傳給服事夥伴點開即可使用</div></div>';
+        h += '<button class="link-btn primary" style="flex:0 0 auto;min-height:38px" onclick="linkCopyStaffUrl()">' + lucide('copy') + '複製</button>';
+        h += '</div>';
+      }
       h += _renderLinksSection_('share', '分享給家人', '點「複製分享」直接貼給會友', share);
       h += _renderLinksSection_('staff', '服事工具', '服事時點開即用', staff);
       main.insertAdjacentHTML('beforeend', h);
@@ -3114,6 +3203,18 @@ function toggleRole() {
     }
 
     function _findLink_(id) { return (linksData || []).filter(function(l) { return l.id === id; })[0] || null; }
+
+    // 複製含金鑰的夥伴專用連結（admin）
+    function linkCopyStaffUrl() {
+      if (!adminToken) { showToast('請先登入 Admin'); return; }
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (r && r.success) linkCopy_(r.url, '已複製夥伴專用連結');
+          else showToast((r && r.error) || '取得連結失敗');
+        })
+        .withFailureHandler(function(e) { showToast('錯誤: ' + (e.message||e)); })
+        .getStaffAccessInfo(adminToken);
+    }
 
     function linkCopyShare(id) {
       const l = _findLink_(id); if (!l) return;
