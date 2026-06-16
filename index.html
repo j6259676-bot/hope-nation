@@ -3058,10 +3058,13 @@ function toggleRole() {
           const _qa_ = function(v){ return JSON.stringify(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
           const encRoles = _qa_(roles), encDate = _qa_(date), encSess = _qa_(sess);
           const personRow_ = function(p, isAssigned) {
-            const tap = 'onclick="schedOpenAssign(' + p.personRowIndex + ',' + _qa_(p.name) + ',' + encDate + ',' + encSess + ',' + encRoles + ')"';
+            const tap = 'onclick="schedOpenAssign(' + p.personRowIndex + ',' + _qa_(p.name) + ',' + encDate + ',' + encSess + ',' + encRoles + ',' + _qa_(p.adminRole || '') + ')"';
             let inner;
             if (isAssigned) {
-              inner = '<span style="background:var(--teal);color:#FFF;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;min-width:50px;text-align:center;flex-shrink:0">' + esc(p.adminRole) + '</span>';
+              inner = '';
+              _splitRoles_(p.adminRole).forEach(function(rr){
+                inner += '<span style="background:var(--teal);color:#FFF;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;text-align:center;flex-shrink:0">' + esc(rr) + '</span>';
+              });
               inner += '<span style="font-size:13px;font-weight:600">' + esc(p.name) + '</span>';
             } else {
               inner = '<span style="font-size:13px;font-weight:600">' + esc(p.name) + '</span>';
@@ -3091,7 +3094,7 @@ function toggleRole() {
               h += '<span style="background:#FFF4E0;color:#B26A00;border:1px solid #F0B860;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:700">申請調整</span>';
               h += '<span style="font-size:13px;font-weight:600">' + esc(c.name) + '</span>';
               if (c.note) h += '<span style="font-size:12px;color:#8A5A12;flex-basis:100%;padding-left:2px">「' + esc(c.note) + '」</span>';
-              h += '<button onclick="schedOpenAssign(' + c.personRowIndex + ',' + _qb_(c.name) + ',' + _qb_(date) + ',' + _qb_(sess) + ',' + _qb_(roles) + ')" style="margin-left:auto;background:none;border:1.5px solid #F0B860;border-radius:6px;padding:2px 8px;font-size:11px;color:#B26A00;cursor:pointer">處理</button>';
+              h += '<button onclick="schedOpenAssign(' + c.personRowIndex + ',' + _qb_(c.name) + ',' + _qb_(date) + ',' + _qb_(sess) + ',' + _qb_(roles) + ',' + _qb_(c.adminRole || '') + ')" style="margin-left:auto;background:none;border:1.5px solid #F0B860;border-radius:6px;padding:2px 8px;font-size:11px;color:#B26A00;cursor:pointer">處理</button>';
               h += '</div>';
             });
           }
@@ -3365,7 +3368,13 @@ function toggleRole() {
         .deleteLink(id, adminToken);
     }
 
-    function schedOpenAssign(rowIndex, name, date, session, roles) {
+    // 把 adminRole 儲存字串（'IT·Rally'）拆回角色陣列
+    function _splitRoles_(s) {
+      return String(s || '').split('·').map(function(x){ return x.trim(); }).filter(Boolean);
+    }
+
+    // currentStr：此人此場目前已指派的角色（'IT·Rally'，可空）→ 多選 toggle，一人可同時多角色
+    function schedOpenAssign(rowIndex, name, date, session, roles, currentStr) {
       let modal = document.getElementById('schedAssignModal');
       if (!modal) {
         modal = document.createElement('div');
@@ -3374,6 +3383,10 @@ function toggleRole() {
         modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
         document.body.appendChild(modal);
       }
+      // 本機選取狀態（最後按「儲存指派」才一次送出）
+      const selected = {};
+      _splitRoles_(currentStr).forEach(function(r){ selected[r] = true; });
+
       const dateLabel = date.replace(/^\d+-?(\d+)-(\d+)$/, function(_,m,d){return parseInt(m)+'/'+parseInt(d);});
       const inner = document.createElement('div');
       inner.style.cssText = 'background:#FDFCF9;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;box-sizing:border-box';
@@ -3389,29 +3402,50 @@ function toggleRole() {
       subEl.textContent = dateLabel + ' ' + session;
       inner.appendChild(subEl);
       const labelEl = document.createElement('div');
-      labelEl.style.cssText = 'font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px';
-      labelEl.textContent = '指派角色';
+      labelEl.style.cssText = 'font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px';
+      labelEl.textContent = '指派角色（可複選）';
       inner.appendChild(labelEl);
+      const hintEl = document.createElement('div');
+      hintEl.style.cssText = 'font-size:11px;color:var(--muted);margin-bottom:10px';
+      hintEl.textContent = '可同時指派多個角色，例如 IT＋Rally；再點一次取消選取。';
+      inner.appendChild(hintEl);
+
+      const chipOn  = function(b){ b.style.cssText = 'flex:1;min-width:72px;padding:12px;border:1.5px solid var(--teal);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:var(--teal);color:#FFF'; };
+      const chipOff = function(b){ b.style.cssText = 'flex:1;min-width:72px;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:#FFF;color:var(--black)'; };
       const btns = document.createElement('div');
       btns.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap';
       roles.forEach(function(r) {
         const btn = document.createElement('button');
-        btn.style.cssText = 'flex:1;min-width:72px;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:#FFF;color:var(--black)';
         btn.textContent = r;
-        btn.onclick = function() { schedAssignRoleAction(rowIndex, date, session, r); };
+        (selected[r] ? chipOn : chipOff)(btn);
+        btn.onclick = function() {
+          if (selected[r]) delete selected[r]; else selected[r] = true;
+          (selected[r] ? chipOn : chipOff)(btn);
+        };
         btns.appendChild(btn);
       });
       inner.appendChild(btns);
-      // Manager：只能由管理者指派（點 1），夥伴端看不到
+      // Manager：只能由管理者指派（點 1），夥伴端看不到；也可與其他角色並存
+      const mgrOn  = function(b){ b.style.cssText = 'width:100%;padding:12px;border:1.5px solid var(--teal);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:var(--teal);color:#FFF;margin-bottom:12px'; };
+      const mgrOff = function(b){ b.style.cssText = 'width:100%;padding:12px;border:1.5px solid var(--teal);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:#FFF;color:var(--teal);margin-bottom:12px'; };
       const mgrBtn = document.createElement('button');
-      mgrBtn.style.cssText = 'width:100%;padding:12px;border:1.5px solid var(--teal);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:#FFF;color:var(--teal);margin-bottom:12px';
-      mgrBtn.textContent = '指派 Manager（管理者專屬）';
-      mgrBtn.onclick = function() { schedAssignRoleAction(rowIndex, date, session, 'Manager'); };
+      mgrBtn.textContent = 'Manager（管理者專屬）';
+      (selected['Manager'] ? mgrOn : mgrOff)(mgrBtn);
+      mgrBtn.onclick = function() {
+        if (selected['Manager']) delete selected['Manager']; else selected['Manager'] = true;
+        (selected['Manager'] ? mgrOn : mgrOff)(mgrBtn);
+      };
       inner.appendChild(mgrBtn);
+      // 儲存指派（一次送出所有選取角色）
+      const saveBtn = document.createElement('button');
+      saveBtn.style.cssText = 'width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;background:var(--black);color:var(--yellow);margin-bottom:8px';
+      saveBtn.textContent = '儲存指派';
+      saveBtn.onclick = function() { schedAssignRolesAction(rowIndex, date, session, Object.keys(selected)); };
+      inner.appendChild(saveBtn);
       const clearBtn = document.createElement('button');
       clearBtn.style.cssText = 'width:100%;padding:12px;border:1.5px solid #FFCDD2;border-radius:10px;font-size:14px;color:#C62828;background:#FFF;cursor:pointer;margin-bottom:8px';
       clearBtn.textContent = '清除指派（保留可服事）';
-      clearBtn.onclick = function() { schedAssignRoleAction(rowIndex, date, session, ''); };
+      clearBtn.onclick = function() { schedAssignRolesAction(rowIndex, date, session, []); };
       inner.appendChild(clearBtn);
       // 取消此人此場：標記不能服事，從名單移除（點 5）
       const cancelBtn = document.createElement('button');
@@ -3419,8 +3453,7 @@ function toggleRole() {
       cancelBtn.textContent = '取消此人此場（移出本場）';
       cancelBtn.onclick = function() { schedCancelAvailabilityAction(rowIndex, name, date, session); };
       inner.appendChild(cancelBtn);
-      modal.innerHTML = '';
-      modal.appendChild(inner);
+      modal.replaceChildren(inner);
       modal.style.display = 'flex';
     }
 
@@ -3445,21 +3478,24 @@ function toggleRole() {
       schedOverviewData.counts[key] = { available: avail, assigned: assigned, changeRequested: changeReq };
     }
 
-    function schedAssignRoleAction(rowIndex, date, session, role) {
+    // 一次送出多個角色（rolesArr 可空＝清除指派）
+    function schedAssignRolesAction(rowIndex, date, session, rolesArr) {
       const modal = document.getElementById('schedAssignModal');
       if (modal) modal.style.display = 'none';
       const period = schedOverviewData && schedOverviewData.period;
       if (!period || !adminToken) { showToast('請先登入 Admin'); return; }
+      const roles = (rolesArr || []).filter(Boolean);
+      const joined = roles.join('·');
       // 樂觀更新：就地改該格，不整頁重載，可連續快速指派（#3）
-      schedApplyLocalCell_(date, session, rowIndex, { adminRole: role || '', status: role ? 'assigned' : 'available' });
+      schedApplyLocalCell_(date, session, rowIndex, { adminRole: joined, status: joined ? 'assigned' : 'available' });
       schedRosterData = null; // 失效「一起服事」名冊快取，下次開該頁重新抓（角色/移除即時反映）
       schedLastLocalEditTs = Date.now(); schedOverviewSig = ''; // 標記剛編輯，並讓下次 poll 必定套用最新
       renderScheduleTab(document.getElementById('mainContent'));
-      showToast(role ? '已指派：' + role : '已清除指派');
+      showToast(joined ? '已指派：' + roles.join('、') : '已清除指派');
       google.script.run
         .withSuccessHandler(function(r) { if (!r || !r.success) { showToast((r && r.error) || '指派失敗，已重新整理'); schedOverviewRefresh(); } })
         .withFailureHandler(function(e) { showToast('錯誤，已重新整理: ' + (e.message||e)); schedOverviewRefresh(); })
-        .adminAssignRole(period.periodId, rowIndex, date, session, role, adminToken);
+        .adminAssignRole(period.periodId, rowIndex, date, session, roles, adminToken);
     }
 
     // 取消某人某場的可服事（點 5）
