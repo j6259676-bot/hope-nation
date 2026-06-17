@@ -510,6 +510,7 @@
     let schedStaffSessionFilter = localStorage.getItem('schedStaffSessionFilter') || '全部'; // 名單依場次篩選（點 6）
     let schedSessionFocus = localStorage.getItem('schedSessionFocus') || '全部'; // 場次焦點：全部/9:30/11:30/2:00，套用我的服事+一起服事+總覽
     let schedShowHelp = localStorage.getItem('schedShowHelp') !== 'false'; // 預設展開
+    let schedSubmitState = '';        // 確認送出按鈕狀態：'' | 'sending' | 'done'
     // Admin 總覽
     let schedRosterData = null;      // 公開名冊 { period, slots, roster }（點 7）
     let schedRosterLoading = false;
@@ -2255,6 +2256,10 @@ function toggleRole() {
       }
       h += '</div>';
 
+      // ── 區隔：以上是「我這期的服事」（含管理者指派），以下是「我的排班意願」 ──
+      h += '<div style="display:flex;align-items:center;gap:10px;margin:18px 0 12px"><div style="flex:1;height:1px;background:var(--border)"></div><span style="font-size:13px;font-weight:700;color:var(--black)">我的排班意願</span><div style="flex:1;height:1px;background:var(--border)"></div></div>';
+      h += '<div style="font-size:12px;color:var(--muted);margin:-4px 0 12px;text-align:center">點下方場次設定你能來的時間（這裡只記你的意願，不會被指派改動）</div>';
+
       // ── 填寫說明 ──
       h += renderSchedHelp();
 
@@ -2278,28 +2283,24 @@ function toggleRole() {
         const weekSlots = week.slots.filter(function(s) { return showSessions.indexOf(s.session) >= 0; });
         if (!weekSlots.length) return;
         const filled = weekSlots.every(function(s) { const e = schedLocalEntries[s.date+'|'+s.session]; return e && e.status; });
-        const hasAvail = weekSlots.some(function(s) { const e = schedLocalEntries[s.date+'|'+s.session]; return e && e.status === 'available'; });
+        const hasAvail = weekSlots.some(function(s) { const e = schedLocalEntries[s.date+'|'+s.session]; return e && (e.status === 'available' || e.status === 'assigned'); });
         h += '<div class="card" style="margin-bottom:8px;padding:14px">';
         h += '<div style="display:flex;align-items:center;margin-bottom:10px"><div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + (filled ? '#4CAF7D' : 'var(--border)') + ';margin-right:8px"></div><div style="font-size:15px;font-weight:700">第 ' + (wi+1) + ' 週<span style="font-weight:400;color:var(--muted);font-size:13px"> · ' + schedFmtDate(week.date) + '（日）</span></div></div>';
         const multiSlot = weekSlots.length > 1;
         h += '<div style="display:flex;gap:8px;margin-bottom:' + (hasAvail ? '10px' : '0') + '">';
         weekSlots.forEach(function(slot) {
           const e = schedLocalEntries[slot.date+'|'+slot.session];
-          const avail = e && e.status==='available';
-          const assigned = e && e.status==='assigned';
+          // 排班意願只反映「我自己選的」狀態，不受管理者指派角色影響（指派只顯示在上方「我這期的服事」）
+          const avail = e && (e.status==='available' || e.status==='assigned');
           const unavail = e && (e.status==='unavailable_all' || e.status==='unavailable');
           const changeReq = e && e.status==='change_requested';
-          const assignedRole = e && e.adminRole;
-          // 狀態文字：已排角色 / 可服事 / 休息 / 申請中 / 未填
+          // 狀態文字：可服事 / 休息 / 申請中 / 未填
           let stateText, chipStyle;
           if (changeReq) {
             stateText = '申請中';
             chipStyle = 'background:#FFF4E0;color:#B26A00;border-color:#F0B860;';
-          } else if (assigned) {
-            stateText = assignedRole || '已排';
-            chipStyle = 'background:var(--teal);color:#FFF;border-color:var(--teal);';
           } else if (avail) {
-            stateText = assignedRole ? assignedRole : '可服事';
+            stateText = '可服事';
             chipStyle = 'background:var(--yellow);color:var(--black);border-color:var(--yellow);';
           } else if (unavail) {
             stateText = '休息';
@@ -2319,7 +2320,7 @@ function toggleRole() {
           h += '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">預設接待 Host · 也能擔任以下特殊角色再勾選（選填）</div>';
           weekSlots.forEach(function(slot) {
             const e = schedLocalEntries[slot.date+'|'+slot.session];
-            if (!e || e.status !== 'available') return;
+            if (!e || (e.status !== 'available' && e.status !== 'assigned')) return;
             const cellKey = slot.date + '|' + slot.session;
             const cellTaken = takenRoles[cellKey] || {};
             const slotRoles = (e.roles && e.roles.length) ? e.roles : [];
@@ -2348,9 +2349,14 @@ function toggleRole() {
         h += '</div>';
       });
 
-      // ── 完成填寫按鈕 ──
-      const availCount = Object.keys(schedLocalEntries).filter(function(k) { return schedLocalEntries[k] && schedLocalEntries[k].status === 'available'; }).length;
-      h += '<button onclick="schedCompleteFill()" style="width:100%;padding:14px;background:var(--teal);color:#FFF;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px">' + (availCount ? '完成填寫（已選 ' + availCount + ' 個場次）' : '完成填寫') + '</button>';
+      // ── 確認送出按鈕（醒目 CTA，狀態：可送出 / 送出中 / 已送出）──
+      const availCount = Object.keys(schedLocalEntries).filter(function(k) { const e = schedLocalEntries[k]; return e && (e.status === 'available' || e.status === 'assigned'); }).length;
+      let submitBg = 'var(--teal)', submitIcon = lucide('check-circle', 20), submitLabel;
+      if (schedSubmitState === 'sending') { submitLabel = '送出中…'; submitIcon = ''; }
+      else if (schedSubmitState === 'done') { submitBg = '#2E7D32'; submitLabel = '已送出，感謝你！'; }
+      else { submitLabel = availCount ? '確認送出（' + availCount + ' 個場次可服事）' : '確認送出'; }
+      h += '<div style="font-size:11px;color:var(--muted);text-align:center;margin:16px 0 6px">你的選擇會自動儲存，按下方按鈕確認送出</div>';
+      h += '<button id="schedSubmitBtn" onclick="schedCompleteFill()" style="width:100%;padding:16px;background:' + submitBg + ';color:#FFF;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:2px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 3px 10px rgba(29,41,46,.18)">' + submitIcon + '<span>' + submitLabel + '</span></button>';
       return h;
     }
 
@@ -2620,7 +2626,7 @@ function toggleRole() {
       });
       const dayNames = ['日','一','二','三','四','五','六'];
       const dates = Object.keys(byDate).sort();
-      let h = '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">每個主日各場一起服事的夥伴 ✓ 後是已指派角色</div>';
+      let h = '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">每個主日各場一起服事的夥伴，上方是已排定角色、下方是 Host（接待）</div>';
       h += '<div class="sched-two-col">';
       dates.forEach(function(date) {
         const d = date.split('-');
@@ -2631,31 +2637,31 @@ function toggleRole() {
           const people = roster[date + '|' + sess] || [];
           const border = si < byDate[date].length-1 ? 'border-bottom:1px solid var(--border);' : '';
           h += '<div style="padding:10px 14px;background:#FFF;' + border + '">';
-          h += '<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">' + sess + '（' + people.length + ' 人）</div>';
+          // 場次標頭：比照管理者排班 grid（場次 + 黃色人數徽章）
+          h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap"><span style="font-size:12px;font-weight:700;color:var(--muted)">' + sess + '</span><span style="background:var(--yellow);color:var(--black);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700">' + people.length + ' 人</span></div>';
           if (!people.length) {
             h += '<div style="font-size:13px;color:#BDBDBD;font-style:italic">尚無人</div>';
           } else {
-            // 特殊角色集中顯示在上（比照管理者排班 grid 的「已排定／Host」分區，方便閱讀）
+            // 比照管理者排班 grid：「已排定」（角色徽章＋名字）在上、「Host（接待）」在下，直項逐列易讀
+            const splitR = function(s){ return String(s||'').split('·').map(function(x){ return x.trim(); }).filter(Boolean); };
             const withRole = people.filter(function(p){ return p.role !== 'Host'; });
             const hosts = people.filter(function(p){ return p.role === 'Host'; });
             withRole.sort(function(a, b){ // Manager 排最前
               return (a.role.indexOf('Manager') >= 0 ? 0 : 1) - (b.role.indexOf('Manager') >= 0 ? 0 : 1);
             });
-            const chip = function(p) {
-              const isHost = (p.role === 'Host');
-              return '<span style="display:inline-flex;align-items:center;gap:4px;border-radius:16px;padding:4px 10px;font-size:13px;border:1.5px solid ' + (isHost ? 'var(--border);background:#FFF;color:var(--black)' : 'var(--teal);background:var(--teal);color:#FFF') + '">' + esc(p.name) + (isHost ? '' : ' <span style="font-size:11px;font-weight:700">· ' + esc(p.role) + '</span>') + '</span>';
-            };
             if (withRole.length) {
-              h += '<div style="font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.5px;margin:0 0 4px">特殊角色</div>';
-              h += '<div style="display:flex;flex-wrap:wrap;gap:6px;' + (hosts.length ? 'margin-bottom:8px' : '') + '">';
-              withRole.forEach(function(p){ h += chip(p); });
-              h += '</div>';
+              h += '<div style="font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.5px;margin:2px 0 3px">已排定</div>';
+              withRole.forEach(function(p){
+                let badges = '';
+                splitR(p.role).forEach(function(rr){ badges += '<span style="background:var(--teal);color:#FFF;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;flex-shrink:0">' + esc(rr) + '</span>'; });
+                h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;background:#F2F8F7;margin-bottom:3px;flex-wrap:wrap">' + badges + '<span style="font-size:13px;font-weight:600">' + esc(p.name) + '</span></div>';
+              });
             }
             if (hosts.length) {
-              if (withRole.length) h += '<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin:0 0 4px">Host（接待）</div>';
-              h += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
-              hosts.forEach(function(p){ h += chip(p); });
-              h += '</div>';
+              h += '<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin:' + (withRole.length ? '9px' : '2px') + ' 0 3px">Host（接待）</div>';
+              hosts.forEach(function(p){
+                h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px"><span style="font-size:13px;font-weight:600">' + esc(p.name) + '</span><span style="color:var(--muted);font-size:12px">Host</span></div>';
+              });
             }
           }
           h += '</div>';
@@ -2782,8 +2788,25 @@ function toggleRole() {
     }
 
     function schedCompleteFill() {
-      const availCount = Object.keys(schedLocalEntries).filter(function(k) { return schedLocalEntries[k] && schedLocalEntries[k].status === 'available'; }).length;
-      showToast(availCount ? '已儲存，共 ' + availCount + ' 個場次可服事 ✓' : '已儲存');
+      const availCount = Object.keys(schedLocalEntries).filter(function(k) { const e = schedLocalEntries[k]; return e && (e.status === 'available' || e.status === 'assigned'); }).length;
+      const rerender = function() { renderScheduleTab(document.getElementById('mainContent')); };
+      const finish = function() {
+        schedSubmitState = 'done'; schedRosterData = null; rerender();
+        showToast(availCount ? '已送出 ✓ 共 ' + availCount + ' 個場次可服事' : '已送出 ✓');
+        setTimeout(function() { schedSubmitState = ''; rerender(); }, 1800);
+      };
+      // 把還在 debounce 佇列裡的意願立刻 flush，確認＝真的存好了
+      if (schedBatchTimer) clearTimeout(schedBatchTimer);
+      const batch = Object.values(schedPending); schedPending = {};
+      if (batch.length) {
+        schedSubmitState = 'sending'; rerender();
+        google.script.run
+          .withSuccessHandler(function() { finish(); })
+          .withFailureHandler(function(e) { schedSubmitState = ''; rerender(); showToast('送出失敗: ' + (e.message||e)); })
+          .batchSubmitScheduleEntries(batch, null);
+      } else {
+        finish();
+      }
     }
 
     function schedUnavailableAll() {
