@@ -2409,12 +2409,13 @@ function toggleRole() {
           h += '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">' + esc(s.name) + '</div>' + (s.note ? '<div style="font-size:12px;color:var(--muted)">' + esc(s.note) + '</div>' : '') + '</div>';
           h += sel;
           h += '<button onclick="schedToggleStaff(' + s.rowIndex + ',\'inactive\')" style="padding:5px 10px;background:none;border:1.5px solid #E5998A;border-radius:8px;color:#C05040;font-size:12px;cursor:pointer;white-space:nowrap">休息</button>';
+          h += '<button onclick="schedDeleteStaff(' + s.rowIndex + ')" aria-label="刪除" title="永久刪除" style="padding:5px 7px;background:none;border:1.5px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;flex-shrink:0">' + lucide('trash', 14) + '</button>';
           h += '</div>';
         });
         if (inactive.length) {
           h += '<div style="font-size:12px;color:var(--muted);margin:12px 0 8px">休息中（' + inactive.length + '）</div>';
           inactive.forEach(function(s) {
-            h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1.5px dashed var(--border);border-radius:12px;margin-bottom:8px;opacity:0.6"><div style="font-size:14px;color:var(--muted)">' + esc(s.name) + '</div><button onclick="schedToggleStaff(' + s.rowIndex + ',\'active\')" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer">復原</button></div>';
+            h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border:1.5px dashed var(--border);border-radius:12px;margin-bottom:8px;opacity:0.6"><div style="font-size:14px;color:var(--muted);flex:1;min-width:0">' + esc(s.name) + '</div><div style="display:flex;gap:6px;flex-shrink:0"><button onclick="schedToggleStaff(' + s.rowIndex + ',\'active\')" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer">復原</button><button onclick="schedDeleteStaff(' + s.rowIndex + ')" aria-label="刪除" title="永久刪除" style="padding:5px 7px;background:none;border:1.5px solid #E5998A;border-radius:8px;color:#C05040;cursor:pointer;display:inline-flex;align-items:center">' + lucide('trash', 14) + '</button></div></div>';
           });
         }
       }
@@ -2466,6 +2467,28 @@ function toggleRole() {
         })
         .withFailureHandler(function(e) { showToast('操作失敗: ' + (e.message||e)); })
         .setStaffStatus(rowIndex, newStatus, adminToken);
+    }
+
+    // 永久刪除服事夥伴（連同所有期別的排班紀錄）。名字由 schedStaffList 反查，避免 onclick 內字串跳脫問題。
+    function schedDeleteStaff(rowIndex) {
+      if (!adminToken) { showToast('請先登入管理者'); return; }
+      const item = (schedStaffList || []).find(function(s){ return s.rowIndex === rowIndex; });
+      const name = item ? item.name : '';
+      if (!confirm('確定刪除「' + name + '」嗎？\n會一併刪除他在所有期別的排班紀錄，無法復原。\n（若只是暫時不服事，請改用「休息」。）')) return;
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(d) {
+          hideLoading();
+          if (d && d.success) {
+            showToast('已刪除「' + (d.name || name) + '」' + (d.removedEntries ? '（含 ' + d.removedEntries + ' 筆排班）' : ''));
+            schedRosterData = null; schedOverviewData = null; // 列號變動 → 名冊/總覽快取失效
+            schedLoadStaff();
+          } else {
+            showToast('刪除失敗: ' + (d&&d.error||'未知錯誤'));
+          }
+        })
+        .withFailureHandler(function(e) { hideLoading(); showToast('刪除失敗: ' + (e.message||e)); })
+        .deleteStaffMember(rowIndex, adminToken);
     }
 
     // 名單場次篩選（點 6，純前端）
@@ -2612,12 +2635,28 @@ function toggleRole() {
           if (!people.length) {
             h += '<div style="font-size:13px;color:#BDBDBD;font-style:italic">尚無人</div>';
           } else {
-            h += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
-            people.forEach(function(p) {
-              const isHost = (p.role === 'Host');
-              h += '<span style="display:inline-flex;align-items:center;gap:4px;border-radius:16px;padding:4px 10px;font-size:13px;border:1.5px solid ' + (isHost ? 'var(--border);background:#FFF;color:var(--black)' : 'var(--teal);background:var(--teal);color:#FFF') + '">' + esc(p.name) + (isHost ? '' : ' <span style="font-size:11px;font-weight:700">· ' + esc(p.role) + '</span>') + '</span>';
+            // 特殊角色集中顯示在上（比照管理者排班 grid 的「已排定／Host」分區，方便閱讀）
+            const withRole = people.filter(function(p){ return p.role !== 'Host'; });
+            const hosts = people.filter(function(p){ return p.role === 'Host'; });
+            withRole.sort(function(a, b){ // Manager 排最前
+              return (a.role.indexOf('Manager') >= 0 ? 0 : 1) - (b.role.indexOf('Manager') >= 0 ? 0 : 1);
             });
-            h += '</div>';
+            const chip = function(p) {
+              const isHost = (p.role === 'Host');
+              return '<span style="display:inline-flex;align-items:center;gap:4px;border-radius:16px;padding:4px 10px;font-size:13px;border:1.5px solid ' + (isHost ? 'var(--border);background:#FFF;color:var(--black)' : 'var(--teal);background:var(--teal);color:#FFF') + '">' + esc(p.name) + (isHost ? '' : ' <span style="font-size:11px;font-weight:700">· ' + esc(p.role) + '</span>') + '</span>';
+            };
+            if (withRole.length) {
+              h += '<div style="font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.5px;margin:0 0 4px">特殊角色</div>';
+              h += '<div style="display:flex;flex-wrap:wrap;gap:6px;' + (hosts.length ? 'margin-bottom:8px' : '') + '">';
+              withRole.forEach(function(p){ h += chip(p); });
+              h += '</div>';
+            }
+            if (hosts.length) {
+              if (withRole.length) h += '<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin:0 0 4px">Host（接待）</div>';
+              h += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+              hosts.forEach(function(p){ h += chip(p); });
+              h += '</div>';
+            }
           }
           h += '</div>';
         });
@@ -2755,7 +2794,7 @@ function toggleRole() {
       google.script.run
         .withSuccessHandler(function(r) {
           hideLoading();
-          if (r && r.success) { showToast('已送出：本期都不能服事'); schedViewData = null; schedLocalEntries = {}; schedLoadView(); }
+          if (r && r.success) { showToast('已送出：本期都不能服事'); schedViewData = null; schedLocalEntries = {}; schedRosterData = null; schedLoadView(); }
           else showToast('送出失敗，請重試');
         })
         .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + (e.message||e)); })
@@ -2772,7 +2811,7 @@ function toggleRole() {
         if (!batch.length) return;
         // 一次送整批（後端 batchSubmitScheduleEntries 只讀表一次，取代每筆各打一次）
         google.script.run
-          .withSuccessHandler(function() {})
+          .withSuccessHandler(function() { schedRosterData = null; }) // 自己改了意願 → 失效「一起服事」名冊快取，下次開該頁重抓
           .withFailureHandler(function(e) { showToast('排班儲存失敗: ' + (e.message||e)); })
           .batchSubmitScheduleEntries(batch, null);
       }, 500);
@@ -2790,7 +2829,7 @@ function toggleRole() {
       schedLocalEntries[key] = Object.assign({}, cur, { status: 'change_requested', note: trimmed });
       renderScheduleTab(document.getElementById('mainContent'));
       google.script.run
-        .withSuccessHandler(function() { showToast('已送出調整申請，管理者會再跟你確認 ✓'); })
+        .withSuccessHandler(function() { schedRosterData = null; showToast('已送出調整申請，管理者會再跟你確認 ✓'); })
         .withFailureHandler(function(e) { showToast('送出失敗: ' + (e.message||e)); })
         .submitScheduleEntry({ periodId: period.periodId, personRowIndex: schedPersonRow, date: date, session: session, status: 'change_requested', roles: cur.roles || [], note: trimmed }, null);
     }
