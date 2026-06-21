@@ -704,8 +704,12 @@ function toggleRole() {
       } else {
         html += '<div style="color:var(--muted);font-size:13px;padding:12px 0">尚無近況紀錄</div>';
       }
+      if (isAdmin) {
+        html += '<button onclick="editFromDash(' + idx + ')" style="width:100%;margin-top:12px;padding:11px;background:none;border:1.5px solid var(--teal);border-radius:10px;color:var(--teal);font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px">' + lucide('edit', 15) + '編輯資料 / 合併重複</button>';
+      }
       html += '</div>';
-      modal.innerHTML = html;
+      modal.replaceChildren();
+      modal.insertAdjacentHTML('beforeend', html);
       modal.style.display = 'flex';
     }
 
@@ -905,14 +909,40 @@ function toggleRole() {
     }
 
     // === 編輯單一成員資料（admin）===
-    let _editPersonIdx = -1;
-    let _editPersonOrigName = '';
+    // 物件化：查詢頁與總覽頁共用同一編輯 sheet。
+    let _editPersonObj = null;     // 正在編輯的人物件（searchResults 或 _dashStories 的元素）
+    let _editPersonOrigName = '';  // 編輯前的正式名（後端定位 row 用）
+    let _editPersonLight = null;   // 一般欄位存檔後的輕量重繪
+    let _editPersonReload = null;  // 合併等會改變分組時的完整重載
+    let _editPersonNewPhoto = null;// 這次新挑的照片 base64（null=沒換）
+
+    // 查詢頁入口
     function openEditPerson(idx) {
-      if (!isAdmin || !adminToken) { showToast('請先登入 Admin'); return; }
       const p = searchResults[idx];
       if (!p) return;
-      _editPersonIdx = idx;
+      openEditPersonObj(
+        p,
+        function() { renderSearchTab(document.getElementById('mainContent')); },
+        function() { doSearch(); }
+      );
+    }
+    // 總覽故事卡入口
+    function editFromDash(idx) {
+      const p = _dashStories[idx];
+      if (!p) return;
+      const reload = function() { closePersonModal(); loadDashboard(); };
+      openEditPersonObj(p, reload, reload);
+    }
+
+    // 通用入口：傳人物件 + 輕量重繪 + 完整重載
+    function openEditPersonObj(p, lightRefresh, fullReload) {
+      if (!isAdmin || !adminToken) { showToast('請先登入 Admin'); return; }
+      if (!p) return;
+      _editPersonObj = p;
       _editPersonOrigName = p.name || '';
+      _editPersonLight = lightRefresh || null;
+      _editPersonReload = fullReload || lightRefresh || null;
+      _editPersonNewPhoto = null;
       let modal = document.getElementById('editPersonModal');
       if (!modal) {
         modal = document.createElement('div');
@@ -921,27 +951,57 @@ function toggleRole() {
         modal.onclick = function(e){ if (e.target === modal) modal.style.display = 'none'; };
         document.body.appendChild(modal);
       }
+      modal.replaceChildren();
+      modal.insertAdjacentHTML('beforeend', _buildEditPersonHtml_(p));
+      modal.style.display = 'flex';
+      setEditGender(p.gender || '');
+      _renderEditPhotoPreview_();
+    }
+
+    function _buildEditPersonHtml_(p) {
       const fld = function(id, label, val, ph) {
         return '<div style="margin-bottom:10px"><div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px">' + label + '</div><input type="text" class="input" id="' + id + '" value="' + esc(val || '') + '" placeholder="' + (ph||'') + '" style="margin-bottom:0"></div>';
       };
-      let inner = '<div style="background:#FDFCF9;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:540px;box-sizing:border-box;max-height:88vh;overflow-y:auto">';
-      inner += '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>';
-      inner += '<div style="font-size:16px;font-weight:800;margin-bottom:14px">編輯成員資料</div>';
-      inner += fld('editName', '名字', p.name, '正確名字');
-      inner += fld('editYt', 'YT 帳號', p.ytId, '可留空');
-      inner += '<div style="margin-bottom:10px"><div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px">性別</div><div style="display:flex;gap:8px">'
+      let h = '<div style="background:#FDFCF9;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:540px;box-sizing:border-box;max-height:90vh;overflow-y:auto">';
+      h += '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>';
+      h += '<div style="font-size:16px;font-weight:800;margin-bottom:14px">編輯成員資料</div>';
+      h += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">';
+      h += '<div id="editPhotoPreview" class="photo-upload" onclick="document.getElementById(\'editPhotoInput\').click()" style="flex:0 0 auto"></div>';
+      h += '<div style="flex:1"><div style="font-size:13px;font-weight:700;margin-bottom:2px">照片</div><div style="font-size:12px;color:var(--muted)">點左側補上或更換照片</div></div>';
+      h += '<input type="file" id="editPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="editPhotoPick(this)">';
+      h += '</div>';
+      h += fld('editName', '名字', p.name, '正確名字');
+      h += fld('editYt', 'YT 帳號', p.ytId, '可留空');
+      h += '<div style="margin-bottom:10px"><div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px">性別</div><div style="display:flex;gap:8px">'
         + '<button type="button" id="editGenderM" onclick="setEditGender(\'男\')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#FFF;cursor:pointer;font-weight:600">男</button>'
         + '<button type="button" id="editGenderF" onclick="setEditGender(\'女\')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#FFF;cursor:pointer;font-weight:600">女</button>'
         + '<button type="button" id="editGenderN" onclick="setEditGender(\'\')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#FFF;cursor:pointer;font-weight:600;color:var(--muted)">未知</button>'
         + '</div><input type="hidden" id="editGender" value="' + esc(p.gender || '') + '"></div>';
-      inner += '<div class="grid-2">' + fld('editCountry', '國家', p.country, '國家') + fld('editCity', '城市', p.city, '城市') + '</div>';
-      inner += '<div style="font-size:11px;color:var(--muted);margin:6px 0 14px">會更新這個人的所有紀錄；留空代表清除該欄</div>';
-      inner += '<div style="display:flex;gap:10px"><button onclick="document.getElementById(\'editPersonModal\').style.display=\'none\'" style="flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:#FFF;font-size:15px;font-weight:700;cursor:pointer">取消</button>'
+      h += '<div class="grid-2">' + fld('editCountry', '國家', p.country, '國家') + fld('editCity', '城市', p.city, '城市') + '</div>';
+      h += '<div style="font-size:11px;color:var(--muted);margin:6px 0 12px">會更新這個人的所有紀錄；留空代表清除該欄</div>';
+      h += '<button onclick="editMergeOpen()" style="width:100%;padding:11px;border-radius:10px;border:1.5px dashed var(--border);background:#FFF;color:var(--steel);font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;margin-bottom:14px">' + lucide('user-plus', 15) + '其實是另一位家人？合併過去</button>';
+      h += '<div style="display:flex;gap:10px"><button onclick="document.getElementById(\'editPersonModal\').style.display=\'none\'" style="flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:#FFF;font-size:15px;font-weight:700;cursor:pointer">取消</button>'
         + '<button class="btn-primary" style="flex:2" onclick="savePersonEdit()">儲存</button></div>';
-      inner += '</div>';
-      modal.innerHTML = inner;
-      modal.style.display = 'flex';
-      setEditGender(p.gender || '');
+      h += '</div>';
+      return h;
+    }
+
+    function _renderEditPhotoPreview_() {
+      const el = document.getElementById('editPhotoPreview'); if (!el) return;
+      const photo = _editPersonNewPhoto || (_editPersonObj && _editPersonObj.photo) || '';
+      el.classList.toggle('has-photo', !!photo);
+      el.replaceChildren();
+      if (photo) {
+        const img = document.createElement('img'); img.src = photo; el.appendChild(img);
+      } else {
+        el.insertAdjacentHTML('beforeend', '<div style="text-align:center;line-height:1.2"><div style="font-size:20px;color:var(--muted)">+</div><div style="font-size:9px;color:var(--muted);font-weight:500">照片</div></div>');
+      }
+    }
+    function editPhotoPick(input) {
+      const file = input.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) { compressImage(e.target.result, 400, 0.7, function(c) { _editPersonNewPhoto = c; _renderEditPhotoPreview_(); }); };
+      reader.readAsDataURL(file);
     }
 
     function setEditGender(g) {
@@ -956,24 +1016,149 @@ function toggleRole() {
     }
 
     function savePersonEdit() {
-      const idx = _editPersonIdx;
+      const obj = _editPersonObj;
+      const onLight = _editPersonLight;
       const get = function(id){ const e = document.getElementById(id); return e ? e.value.trim() : ''; };
       const fields = { name: get('editName'), ytId: get('editYt'), gender: get('editGender'), country: get('editCountry'), city: get('editCity') };
       if (!fields.name) { showToast('名字不能空白'); return; }
+      if (_editPersonNewPhoto) fields.photoBase64 = _editPersonNewPhoto;
       showLoading();
       google.script.run
         .withSuccessHandler(function(r){
           hideLoading();
           const modal = document.getElementById('editPersonModal'); if (modal) modal.style.display = 'none';
           if (r && r.success) {
-            const p = searchResults[idx];
-            if (p) { p.name = fields.name; p.ytId = fields.ytId; p.gender = fields.gender; p.country = fields.country; p.city = fields.city; }
+            if (obj) {
+              obj.name = fields.name; obj.ytId = fields.ytId; obj.gender = fields.gender;
+              obj.country = fields.country; obj.city = fields.city;
+              if (r.photoUrl) obj.photo = r.photoUrl;
+            }
             showToast('已更新（' + (r.updated || 0) + ' 筆紀錄）');
-            renderSearchTab(document.getElementById('mainContent'));
+            if (onLight) onLight();
           } else { showToast((r && r.error) || '更新失敗'); }
         })
         .withFailureHandler(function(e){ hideLoading(); showToast('錯誤: ' + (e.message||e)); })
         .updatePersonInfo(_editPersonOrigName, fields, adminToken);
+    }
+
+    // === 手動合併（admin）===
+    let _mergeSourceName = '';
+    let _mergeFiltered = [];   // 目前選擇器顯示的候選清單
+    let _mergeTargetName = '';
+    let _mergeCanon = '';
+    function editMergeOpen() {
+      _mergeSourceName = _editPersonOrigName;
+      const open = function() {
+        let modal = document.getElementById('mergePickerModal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'mergePickerModal';
+          modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:620;display:flex;align-items:flex-end;justify-content:center';
+          modal.onclick = function(e){ if (e.target === modal) modal.style.display = 'none'; };
+          document.body.appendChild(modal);
+        }
+        modal.replaceChildren();
+        modal.insertAdjacentHTML('beforeend', _buildMergePickerHtml_());
+        modal.style.display = 'flex';
+        _renderMergeCandidates_('');
+      };
+      if (allPersonsList && allPersonsList.length) { open(); }
+      else {
+        showLoading();
+        google.script.run
+          .withSuccessHandler(function(persons){ hideLoading(); allPersonsList = persons || []; open(); })
+          .withFailureHandler(function(e){ hideLoading(); showToast('載入名單失敗: ' + (e.message||e)); })
+          .getAllPersonsForSearch();
+      }
+    }
+    function _buildMergePickerHtml_() {
+      let h = '<div style="background:#FDFCF9;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:540px;box-sizing:border-box;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column">';
+      h += '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>';
+      h += '<div style="font-size:16px;font-weight:800;margin-bottom:4px">合併「' + esc(_mergeSourceName) + '」</div>';
+      h += '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">選這位其實是哪一位家人，兩邊紀錄會合而為一</div>';
+      h += '<input class="input" id="mergeSearch" placeholder="搜尋名字…" oninput="_renderMergeCandidates_(this.value)" style="margin-bottom:10px">';
+      h += '<div id="mergeCandidates" style="overflow-y:auto;max-height:50vh"></div>';
+      h += '<button onclick="document.getElementById(\'mergePickerModal\').style.display=\'none\'" style="margin-top:12px;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#FFF;font-size:15px;font-weight:700;cursor:pointer">取消</button>';
+      h += '</div>';
+      return h;
+    }
+    function _renderMergeCandidates_(kw) {
+      const el = document.getElementById('mergeCandidates'); if (!el) return;
+      const q = (kw || '').trim().toLowerCase();
+      const src = (_mergeSourceName || '').toLowerCase();
+      _mergeFiltered = (allPersonsList || []).filter(function(p){
+        if (!p.name || p.name.toLowerCase() === src) return false;
+        return !q || p.name.toLowerCase().indexOf(q) >= 0 || (p.ytId||'').toLowerCase().indexOf(q) >= 0;
+      }).slice(0, 60);
+      el.replaceChildren();
+      if (!_mergeFiltered.length) { el.insertAdjacentHTML('beforeend', '<div style="color:var(--muted);font-size:13px;padding:14px;text-align:center">找不到符合的家人</div>'); return; }
+      let h = '';
+      _mergeFiltered.forEach(function(p, i){
+        h += '<button onclick="editMergeConfirm(' + i + ')" style="width:100%;text-align:left;padding:11px 12px;border:1px solid var(--border-light);border-radius:10px;background:#FFF;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;gap:8px">';
+        h += '<span style="font-size:14px;font-weight:700;color:var(--black)">' + esc(p.name) + '</span>';
+        if (p.ytId) h += '<span style="font-size:12px;color:var(--muted)">' + esc(p.ytId) + '</span>';
+        if (p.hasPhoto) h += '<span style="font-size:11px;color:var(--teal);margin-left:auto">有照片</span>';
+        h += '</button>';
+      });
+      el.insertAdjacentHTML('beforeend', h);
+    }
+    function editMergeConfirm(i) {
+      const tgt = _mergeFiltered[i];
+      if (!tgt) return;
+      _mergeTargetName = tgt.name;
+      _mergeCanon = tgt.name; // 預設用合併目標當正式名
+      let modal = document.getElementById('mergeConfirmModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'mergeConfirmModal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:640;display:flex;align-items:flex-end;justify-content:center';
+        modal.onclick = function(e){ if (e.target === modal) modal.style.display = 'none'; };
+        document.body.appendChild(modal);
+      }
+      modal.replaceChildren();
+      modal.insertAdjacentHTML('beforeend', _buildMergeConfirmHtml_());
+      modal.style.display = 'flex';
+      _renderMergeCanonChoice_();
+    }
+    function _buildMergeConfirmHtml_() {
+      let h = '<div style="background:#FDFCF9;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:540px;box-sizing:border-box;max-height:88vh;overflow-y:auto">';
+      h += '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>';
+      h += '<div style="font-size:16px;font-weight:800;margin-bottom:6px">確認合併</div>';
+      h += '<div style="font-size:13px;color:var(--steel);line-height:1.6;margin-bottom:14px">「' + esc(_mergeSourceName) + '」和「' + esc(_mergeTargetName) + '」會合而為一，所有近況與照片都會保留。</div>';
+      h += '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px">合併後要用哪個名字？</div>';
+      h += '<div style="display:flex;gap:8px;margin-bottom:16px">';
+      h += '<button type="button" id="mergeCanonA" onclick="setMergeCanon(0)" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--border);background:#FFF;cursor:pointer;font-weight:700">' + esc(_mergeSourceName) + '</button>';
+      h += '<button type="button" id="mergeCanonB" onclick="setMergeCanon(1)" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--border);background:#FFF;cursor:pointer;font-weight:700">' + esc(_mergeTargetName) + '</button>';
+      h += '</div>';
+      h += '<div style="display:flex;gap:10px"><button onclick="document.getElementById(\'mergeConfirmModal\').style.display=\'none\'" style="flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:#FFF;font-size:15px;font-weight:700;cursor:pointer">取消</button>'
+        + '<button class="btn-primary" style="flex:2" onclick="doMerge()">確認合併</button></div>';
+      h += '</div>';
+      return h;
+    }
+    function setMergeCanon(which) { _mergeCanon = which === 0 ? _mergeSourceName : _mergeTargetName; _renderMergeCanonChoice_(); }
+    function _renderMergeCanonChoice_() {
+      const a = document.getElementById('mergeCanonA'), b = document.getElementById('mergeCanonB');
+      if (!a || !b) return;
+      const onA = _mergeCanon === _mergeSourceName;
+      a.style.border = '1.5px solid ' + (onA ? 'var(--teal)' : 'var(--border)'); a.style.background = onA ? 'var(--teal)' : '#FFF'; a.style.color = onA ? '#FFF' : 'var(--black)';
+      b.style.border = '1.5px solid ' + (!onA ? 'var(--teal)' : 'var(--border)'); b.style.background = !onA ? 'var(--teal)' : '#FFF'; b.style.color = !onA ? '#FFF' : 'var(--black)';
+    }
+    function doMerge() {
+      const src = _mergeSourceName, tgt = _mergeTargetName, canon = _mergeCanon || _mergeTargetName;
+      const reload = _editPersonReload;
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(r){
+          hideLoading();
+          ['mergeConfirmModal','mergePickerModal','editPersonModal'].forEach(function(id){ const m=document.getElementById(id); if(m) m.style.display='none'; });
+          if (r && r.success) {
+            allPersonsList = []; // 名單已變動，下次重抓
+            showToast('已合併為「' + canon + '」');
+            if (reload) reload();
+          } else { showToast((r && r.error) || '合併失敗'); }
+        })
+        .withFailureHandler(function(e){ hideLoading(); showToast('錯誤: ' + (e.message||e)); })
+        .confirmMerge([src, tgt], canon, null, {});
     }
 
     // === Gathering Tab ===
@@ -1000,11 +1185,16 @@ function toggleRole() {
           html += '<div class="anim-slide" style="margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px">' + date + '</div>';
           html += '<div class="card" style="padding:0;overflow:hidden;margin-bottom:0">';
           items.forEach((g, gi) => {
-            html += '<div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center;' + (gi > 0 ? 'border-top:1px solid var(--border-light)' : '') + '">';
-            html += '<div style="display:flex;align-items:center;gap:8px">' + sessionTagHTML(g.session);
-            if (g.note) html += '<span style="font-size:12px;color:var(--muted)">' + esc(g.note) + '</span>';
+            html += '<div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;' + (gi > 0 ? 'border-top:1px solid var(--border-light)' : '') + '">';
+            html += '<div style="display:flex;align-items:center;gap:8px;min-width:0">' + sessionTagHTML(g.session);
+            if (g.note) html += '<span style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(g.note) + '</span>';
+            html += '</div>';
             const staffTag = (g.staffCount || g.staffCount === 0) ? '<div style="font-size:11px;color:var(--muted);margin-top:1px">服事 ' + g.staffCount + '</div>' : '';
-            html += '</div><div style="text-align:right"><span style="font-size:16px;font-weight:700">' + g.count + '</span>' + staffTag + '</div></div>';
+            html += '<div style="display:flex;align-items:center;gap:4px;flex:0 0 auto">';
+            html += '<div style="text-align:right;min-width:28px"><span style="font-size:16px;font-weight:700">' + g.count + '</span>' + staffTag + '</div>';
+            html += '<button onclick="gatherOpenEditor(' + g.rowIndex + ')" aria-label="編輯" style="background:none;border:none;padding:6px;color:var(--muted);cursor:pointer;display:flex;align-items:center">' + lucide('edit', 16) + '</button>';
+            html += '<button onclick="gatherDelete(' + g.rowIndex + ')" aria-label="刪除" style="background:none;border:none;padding:6px;color:#C0392B;cursor:pointer;display:flex;align-items:center">' + lucide('trash', 16) + '</button>';
+            html += '</div></div>';
           });
           html += '<div style="padding:8px 14px;background:#FAFAF7;display:flex;justify-content:space-between;border-top:1px solid var(--border-light)"><span style="font-size:12px;color:var(--muted);font-weight:500">合計</span><span style="font-size:14px;font-weight:700;color:var(--teal)">' + total + '</span></div>';
           html += '</div></div>';
@@ -1066,6 +1256,93 @@ function toggleRole() {
         })
         .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + e.message); })
         .addGatheringRecord({ date, session: gatherSession, count: parseInt(count), note, staffCount: staffCount }, adminToken);
+    }
+
+    // === 編輯 / 刪除已送出的聚會紀錄（admin）===
+    let gatherEditId = null; // 正在編輯的 rowIndex
+    function _findGather_(rowIndex) {
+      return (gatherings || []).filter(function(g) { return g.rowIndex === rowIndex; })[0] || null;
+    }
+    function _geField_(label, control) {
+      return '<div style="margin-bottom:14px"><div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px">' + label + '</div>' + control + '</div>';
+    }
+    function _buildGatherEditorHtml_(g) {
+      const sessions = ['9:30', '11:30', '2:00'];
+      let opts = sessions.map(function(s) { return '<option value="' + s + '"' + (g.session === s ? ' selected' : '') + '>' + s + '</option>'; }).join('');
+      if (sessions.indexOf(g.session) < 0 && g.session) opts = '<option value="' + esc(g.session) + '" selected>' + esc(g.session) + '</option>' + opts;
+      const staffVal = (g.staffCount || g.staffCount === 0) ? g.staffCount : '';
+      let h = '<div style="background:#FDFCF9;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:540px;box-sizing:border-box;max-height:90vh;overflow-y:auto">';
+      h += '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>';
+      h += '<div style="font-size:17px;font-weight:800;margin-bottom:16px">編輯聚會紀錄</div>';
+      h += _geField_('日期', '<input type="date" class="input" id="geDate" value="' + esc(g.date) + '">');
+      h += _geField_('場次', '<select class="input" id="geSession">' + opts + '</select>');
+      h += '<div class="grid-2">';
+      h += _geField_('出席人數', '<input type="number" class="input" id="geCount" value="' + g.count + '">');
+      h += _geField_('服事夥伴人數', '<input type="number" class="input" id="geStaff" value="' + staffVal + '" placeholder="未登記">');
+      h += '</div>';
+      h += _geField_('備註', '<input class="input" id="geNote" value="' + esc(g.note) + '">');
+      h += '<div style="display:flex;gap:10px;margin-top:8px">';
+      h += '<button onclick="document.getElementById(\'gatherEditorModal\').style.display=\'none\'" style="flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:#FFF;font-size:15px;font-weight:700;cursor:pointer">取消</button>';
+      h += '<button onclick="gatherSubmitEditor()" style="flex:1;padding:13px;border-radius:12px;border:none;background:var(--black);color:var(--yellow);font-size:15px;font-weight:700;cursor:pointer">儲存修改</button>';
+      h += '</div></div>';
+      return h;
+    }
+    function gatherOpenEditor(rowIndex) {
+      const g = _findGather_(rowIndex);
+      if (!g) { showToast('紀錄不存在，請重新整理'); return; }
+      gatherEditId = rowIndex;
+      let modal = document.getElementById('gatherEditorModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'gatherEditorModal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:flex-end;justify-content:center';
+        modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
+        document.body.appendChild(modal);
+      }
+      modal.replaceChildren();
+      modal.insertAdjacentHTML('beforeend', _buildGatherEditorHtml_(g));
+      modal.style.display = 'flex';
+    }
+    function gatherSubmitEditor() {
+      const g = _findGather_(gatherEditId);
+      if (!g) { showToast('紀錄不存在，請重新整理'); return; }
+      const date = document.getElementById('geDate').value;
+      const session = document.getElementById('geSession').value;
+      const count = document.getElementById('geCount').value;
+      const note = document.getElementById('geNote').value;
+      const staffRaw = document.getElementById('geStaff').value;
+      if (!date) { showToast('請選擇日期'); return; }
+      if (!session) { showToast('請選擇場次'); return; }
+      if (count === '') { showToast('請填寫出席人數'); return; }
+      const staffCount = staffRaw === '' ? '' : parseInt(staffRaw);
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(r) {
+          hideLoading();
+          if (r && r.success) {
+            const m = document.getElementById('gatherEditorModal'); if (m) m.style.display = 'none';
+            showToast('已更新紀錄'); loadGatherings();
+          } else { showToast((r && r.error) || '更新失敗'); }
+        })
+        .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + (e.message || e)); })
+        .updateGatheringRecord({
+          rowIndex: g.rowIndex, date: date, session: session, count: parseInt(count), note: note, staffCount: staffCount,
+          expectDate: g.date, expectSession: g.session
+        }, adminToken);
+    }
+    function gatherDelete(rowIndex) {
+      const g = _findGather_(rowIndex);
+      if (!g) { showToast('紀錄不存在，請重新整理'); return; }
+      if (!confirm('確定刪除這筆聚會紀錄？\n' + g.date + '　' + g.session + '　出席 ' + g.count + ' 人\n刪除後無法復原。')) return;
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function(r) {
+          hideLoading();
+          if (r && r.success) { showToast('已刪除紀錄'); loadGatherings(); }
+          else { showToast((r && r.error) || '刪除失敗'); }
+        })
+        .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + (e.message || e)); })
+        .deleteGatheringRecord({ rowIndex: g.rowIndex, expectDate: g.date, expectSession: g.session }, adminToken);
     }
 
     // === Dashboard Tab ===
@@ -1287,14 +1564,44 @@ function toggleRole() {
         });
         html += '</div></div>';
 
-        // 最近的故事
-        const sortedStories = [...fp].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        _dashStories = sortedStories.slice(0, 8);
-        html += '<div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:12px">最近的故事</div>';
-        _dashStories.forEach((p, i) => {
-          html += '<div style="display:flex;gap:10px;padding:9px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0.04);' + (i < _dashStories.length - 1 ? 'border-bottom:1px solid var(--border-light)' : '') + '" onclick="showPersonModal(' + i + ')">';
+        // 累積點擊用陣列（本週新朋友 highlight + 最近的故事 共用，依渲染順序 push）
+        _dashStories = [];
+
+        // 本週新朋友 highlight（與上方 KPI「本週新認識的人」同定義：firstDate 在近 7 天內；不受時間範圍下拉影響）
+        const weekNewFriends = fp.filter(p => p.firstDate && p.firstDate >= oneWeekAgo)
+          .sort((a, b) => (b.firstDate || '').localeCompare(a.firstDate || ''));
+        html += '<div class="card" style="border:1.5px solid var(--yellow);background:var(--yellow-light)">';
+        html += '<div style="font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px">' + lucide('user-plus', 17) + '本週新朋友 <span style="font-weight:400;color:var(--muted);font-size:12px">(' + weekNewFriends.length + ' 位)</span></div>';
+        html += '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">近 7 天第一次被記錄的家人</div>';
+        if (weekNewFriends.length === 0) {
+          html += '<div style="color:var(--muted);font-size:13px;text-align:center;padding:14px 0">本週還沒有新朋友被記錄</div>';
+        } else {
+          weekNewFriends.forEach((p, j) => {
+            const idx = _dashStories.length; _dashStories.push(p);
+            html += '<div style="display:flex;gap:10px;padding:9px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0.04);' + (j < weekNewFriends.length - 1 ? 'border-bottom:1px solid var(--border-light)' : '') + '" onclick="showPersonModal(' + idx + ')">';
+            html += avatarHTML(p.photo, p.name, p.gender, 36);
+            html += '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">' + esc(p.name || '(無名)') + ' ' + sessionTagHTML(p.session) + '<span style="font-weight:400;color:var(--muted);font-size:11px;margin-left:auto">' + (p.firstDate || '').slice(5) + '</span></div>';
+            if (p.notes && p.notes[0]) html += '<div style="font-size:12px;color:#888;margin-top:2px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.notes[0].text) + '</div>';
+            html += '</div><div style="color:var(--border);font-size:11px;align-self:center;flex-shrink:0">▶</div></div>';
+          });
+        }
+        html += '</div>';
+
+        // 最近的故事（沿用上方「時間範圍」下拉，不再限 8 筆；本週新朋友加「新」標記）
+        const sortedStories = fp.filter(p => (p.date || '') >= rangeCutoff)
+          .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        const storyRangeLabel = dashRangeMonths === 0 ? '全部' : (dashRangeMonths + ' 個月內');
+        html += '<div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:4px">最近的故事 <span style="font-weight:400;color:var(--muted);font-size:12px">(' + storyRangeLabel + '・' + sortedStories.length + ' 位)</span></div>';
+        html += '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">用上方「時間範圍」調整顯示區間</div>';
+        if (sortedStories.length === 0) {
+          html += '<div style="color:var(--muted);font-size:13px;text-align:center;padding:14px 0">這段期間沒有紀錄</div>';
+        }
+        sortedStories.forEach((p, j) => {
+          const idx = _dashStories.length; _dashStories.push(p);
+          const isNew = p.firstDate && p.firstDate >= oneWeekAgo;
+          html += '<div style="display:flex;gap:10px;padding:9px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0.04);' + (j < sortedStories.length - 1 ? 'border-bottom:1px solid var(--border-light)' : '') + '" onclick="showPersonModal(' + idx + ')">';
           html += avatarHTML(p.photo, p.name, p.gender, 36);
-          html += '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">' + esc(p.name || '(無名)') + ' ' + sessionTagHTML(p.session) + '<span style="font-weight:400;color:var(--muted);font-size:11px;margin-left:auto">' + (p.date || '').slice(5) + '</span></div>';
+          html += '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">' + esc(p.name || '(無名)') + ' ' + sessionTagHTML(p.session) + (isNew ? ' <span style="background:var(--yellow);color:var(--black);font-size:10px;font-weight:700;padding:1px 7px;border-radius:8px">新</span>' : '') + '<span style="font-weight:400;color:var(--muted);font-size:11px;margin-left:auto">' + (p.date || '').slice(5) + '</span></div>';
           if (p.notes && p.notes[0]) html += '<div style="font-size:12px;color:#888;margin-top:2px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.notes[0].text) + '</div>';
           html += '</div><div style="color:var(--border);font-size:11px;align-self:center;flex-shrink:0">▶</div></div>';
         });
@@ -3194,7 +3501,8 @@ function toggleRole() {
         plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
         calendar: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
         'check-circle': '<path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/>',
-        camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>'
+        camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+        'user-plus': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/>'
       };
       const s = size ? ' style="width:' + size + 'px;height:' + size + 'px"' : '';
       return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' + s + '>' + (P[name] || '') + '</svg>';
