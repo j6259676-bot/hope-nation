@@ -2950,22 +2950,22 @@ function toggleRole() {
             h += '<div style="font-size:13px;color:#BDBDBD;font-style:italic">尚無人</div>';
           } else {
             // 比照管理者排班 grid：「已排定」（角色徽章＋名字）在上、「Host（接待）」在下，直項逐列易讀
-            const splitR = function(s){ return String(s||'').split('·').map(function(x){ return x.trim(); }).filter(Boolean); };
-            const withRole = people.filter(function(p){ return p.role !== 'Host'; });
+            // 每人每角色拆成獨立一列，依固定順序 Manager→主持→Rally→IT 排（一人多角色名字會重複，James 同意）
             const hosts = people.filter(function(p){ return p.role === 'Host'; });
-            withRole.sort(function(a, b){ // Manager 排最前
-              return (a.role.indexOf('Manager') >= 0 ? 0 : 1) - (b.role.indexOf('Manager') >= 0 ? 0 : 1);
+            const roleRows = [];
+            people.filter(function(p){ return p.role !== 'Host'; }).forEach(function(p){
+              _splitRoles_(p.role).forEach(function(rr){ roleRows.push({ name: p.name, role: rr }); });
             });
-            if (withRole.length) {
+            roleRows.sort(function(a, b){ return _schedRoleRank_(a.role) - _schedRoleRank_(b.role); });
+            if (roleRows.length) {
               h += '<div style="font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.5px;margin:2px 0 3px">已排定</div>';
-              withRole.forEach(function(p){
-                let badges = '';
-                splitR(p.role).forEach(function(rr){ badges += '<span style="background:var(--teal);color:#FFF;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;flex-shrink:0">' + esc(rr) + '</span>'; });
-                h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;background:#F2F8F7;margin-bottom:3px;flex-wrap:wrap">' + badges + '<span style="font-size:13px;font-weight:600">' + esc(p.name) + '</span></div>';
+              roleRows.forEach(function(p){
+                const badge = '<span style="background:var(--teal);color:#FFF;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;flex-shrink:0">' + esc(p.role) + '</span>';
+                h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;background:#F2F8F7;margin-bottom:3px;flex-wrap:wrap">' + badge + '<span style="font-size:13px;font-weight:600">' + esc(p.name) + '</span></div>';
               });
             }
             if (hosts.length) {
-              h += '<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin:' + (withRole.length ? '9px' : '2px') + ' 0 3px">Host（接待）</div>';
+              h += '<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin:' + (roleRows.length ? '9px' : '2px') + ' 0 3px">Host（接待）</div>';
               hosts.forEach(function(p){
                 h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px"><span style="font-size:13px;font-weight:600">' + esc(p.name) + '</span><span style="color:var(--muted);font-size:12px">Host</span></div>';
               });
@@ -3426,12 +3426,13 @@ function toggleRole() {
 
           const _qa_ = function(v){ return JSON.stringify(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
           const encRoles = _qa_(roles), encDate = _qa_(date), encSess = _qa_(sess);
-          const personRow_ = function(p, isAssigned) {
+          const personRow_ = function(p, isAssigned, displayRole) {
             const tap = 'onclick="schedOpenAssign(' + p.personRowIndex + ',' + _qa_(p.name) + ',' + encDate + ',' + encSess + ',' + encRoles + ',' + _qa_(p.adminRole || '') + ')"';
             let inner;
             if (isAssigned) {
               inner = '';
-              _splitRoles_(p.adminRole).forEach(function(rr){
+              // displayRole 給定時只顯示該角色徽章（每人每角色拆列用）；點擊仍帶整串 adminRole 進指派 sheet
+              (displayRole ? [displayRole] : _splitRoles_(p.adminRole)).forEach(function(rr){
                 inner += '<span style="background:var(--teal);color:#FFF;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;text-align:center;flex-shrink:0">' + esc(rr) + '</span>';
               });
               inner += '<span style="font-size:13px;font-weight:600">' + esc(p.name) + '</span>';
@@ -3448,13 +3449,21 @@ function toggleRole() {
           } else {
             if (assignedList.length) {
               h += '<div style="font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.5px;margin:2px 0 3px">已排定</div>';
-              assignedList.forEach(function(p){ h += personRow_(p, true); });
+              // 每人每角色拆成獨立一列，依固定順序 Manager→主持→Rally→IT 排（一人多角色名字會重複，James 同意）
+              const arows = [];
+              assignedList.forEach(function(p){
+                _splitRoles_(p.adminRole).forEach(function(rr){ arows.push({ p: p, role: rr }); });
+              });
+              arows.sort(function(a, b){ return _schedRoleRank_(a.role) - _schedRoleRank_(b.role); });
+              arows.forEach(function(x){ h += personRow_(x.p, true, x.role); });
             }
             if (poolList.length) {
               h += '<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin:' + (assignedList.length?'9px':'2px') + ' 0 3px">Host（接待）</div>';
               poolList.forEach(function(p){ h += personRow_(p, false); });
             }
           }
+          // Manager 直接加人：把沒填／沒服事的夥伴也排進這場（後端 adminAssignRole 會自動新增/覆蓋）
+          h += '<button onclick="schedOpenAddPerson(' + encDate + ',' + encSess + ')" style="margin-top:8px;width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:#FBFAF7;color:var(--teal);font-size:12px;font-weight:700;cursor:pointer">＋ 加入夥伴服事</button>';
           // 申請調整（橘）：顯示名字 + 原因 + 處理鈕（點 4）
           if (changeReqCells.length) {
             function _qb_(v){ return JSON.stringify(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -3743,6 +3752,87 @@ function toggleRole() {
       return String(s || '').split('·').map(function(x){ return x.trim(); }).filter(Boolean);
     }
 
+    // 固定角色顯示順序（James 確認）：Manager → 主持 → Rally → IT；不在清單內的角色排最後
+    const SCHED_ROLE_ORDER = ['Manager', '主持', 'Rally', 'IT'];
+    function _schedRoleRank_(role) {
+      const i = SCHED_ROLE_ORDER.indexOf(String(role || '').trim());
+      return i < 0 ? SCHED_ROLE_ORDER.length : i;
+    }
+
+    // Manager 直接加人：選一位沒在這場服事的夥伴 → 開指派 sheet 排進來（後端 adminAssignRole 自動新增/覆蓋）
+    function schedOpenAddPerson(date, session) {
+      if (!adminToken) { showToast('請先登入 Admin'); return; }
+      if (!schedStaffList) { schedLoadStaff(); showToast('名單載入中，請再點一次「加入夥伴」'); return; }
+      const period = schedOverviewData && schedOverviewData.period;
+      const roles = (period && period.openableRoles) ? period.openableRoles : ['IT','Rally','主持'];
+      const key = date + '|' + session;
+      const cells = (schedOverviewData && schedOverviewData.grid && schedOverviewData.grid[key]) || [];
+      const present = {};
+      cells.forEach(function(c){ const st = String(c.status || ''); if (st === 'available' || st === 'assigned' || st === 'change_requested') present[c.personRowIndex] = true; });
+      const candidates = (schedStaffList || []).filter(function(s){ return s.status !== 'inactive' && !present[s.rowIndex]; });
+
+      let modal = document.getElementById('schedAddPersonModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'schedAddPersonModal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:610;display:flex;align-items:flex-end;justify-content:center';
+        modal.onclick = function(e){ if (e.target === modal) modal.style.display = 'none'; };
+        document.body.appendChild(modal);
+      }
+      const dateLabel = date.replace(/^\d+-?(\d+)-(\d+)$/, function(_,m,d){ return parseInt(m)+'/'+parseInt(d); });
+      const inner = document.createElement('div');
+      inner.style.cssText = 'background:#FDFCF9;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;box-sizing:border-box;max-height:80vh;display:flex;flex-direction:column';
+      const handle = document.createElement('div');
+      handle.style.cssText = 'width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;flex-shrink:0';
+      inner.appendChild(handle);
+      const titleEl = document.createElement('div');
+      titleEl.style.cssText = 'font-size:15px;font-weight:700;margin-bottom:2px;flex-shrink:0';
+      titleEl.textContent = '加入夥伴服事';
+      inner.appendChild(titleEl);
+      const subEl = document.createElement('div');
+      subEl.style.cssText = 'font-size:13px;color:var(--muted);margin-bottom:12px;flex-shrink:0';
+      subEl.textContent = dateLabel + ' ' + session + '・選一位夥伴排進這場';
+      inner.appendChild(subEl);
+      const search = document.createElement('input');
+      search.type = 'text';
+      search.placeholder = '搜尋夥伴姓名…';
+      search.style.cssText = 'width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;box-sizing:border-box;margin-bottom:10px;flex-shrink:0';
+      inner.appendChild(search);
+      const listEl = document.createElement('div'); // 搜尋結果放獨立 div，input 節點不動，避免 IME 組字被清掉
+      listEl.style.cssText = 'overflow-y:auto;flex:1;min-height:80px';
+      inner.appendChild(listEl);
+
+      const sortByName = function(a, b){ return String(a.name).localeCompare(String(b.name), 'zh-Hant'); };
+      const renderList = function() {
+        const q = String(search.value || '').trim().toLowerCase();
+        const shown = candidates.filter(function(s){ return !q || s.name.toLowerCase().indexOf(q) >= 0; }).sort(sortByName);
+        listEl.replaceChildren();
+        if (!shown.length) {
+          listEl.insertAdjacentHTML('beforeend', '<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">' + (candidates.length ? '查無符合的夥伴' : '這場已涵蓋所有在職夥伴') + '</div>');
+          return;
+        }
+        let html = '';
+        shown.forEach(function(s){
+          const hs = s.homeSession ? '<span style="color:var(--muted);font-size:12px;margin-left:6px">' + esc(s.homeSession) + '</span>' : '';
+          html += '<button data-row="' + s.rowIndex + '" data-name="' + esc(s.name) + '" style="display:flex;align-items:center;width:100%;text-align:left;gap:6px;padding:11px 10px;border:none;border-bottom:1px solid var(--border);background:#FFF;cursor:pointer;font-size:14px"><span style="font-weight:600">' + esc(s.name) + '</span>' + hs + '<span style="margin-left:auto;color:var(--teal);font-size:13px;font-weight:700;flex-shrink:0">排入 ›</span></button>';
+        });
+        listEl.insertAdjacentHTML('beforeend', html);
+        listEl.querySelectorAll('button[data-row]').forEach(function(b){
+          b.onclick = function(){
+            const rowIndex = parseInt(b.getAttribute('data-row'), 10);
+            const name = b.getAttribute('data-name');
+            modal.style.display = 'none';
+            schedOpenAssign(rowIndex, name, date, session, roles, ''); // 空角色＝預設 Host，可改選特殊角色
+          };
+        });
+      };
+      search.oninput = renderList;
+      renderList();
+      modal.replaceChildren(inner);
+      modal.style.display = 'flex';
+      setTimeout(function(){ try { search.focus(); } catch(e){} }, 50);
+    }
+
     // currentStr：此人此場目前已指派的角色（'IT·Rally'，可空）→ 多選 toggle，一人可同時多角色
     function schedOpenAssign(rowIndex, name, date, session, roles, currentStr) {
       let modal = document.getElementById('schedAssignModal');
@@ -3756,6 +3846,7 @@ function toggleRole() {
       // 本機選取狀態（最後按「儲存指派」才一次送出）
       const selected = {};
       _splitRoles_(currentStr).forEach(function(r){ selected[r] = true; });
+      if (!Object.keys(selected).length) selected['Host'] = true; // 無特殊角色＝預設 Host（接待）
 
       const dateLabel = date.replace(/^\d+-?(\d+)-(\d+)$/, function(_,m,d){return parseInt(m)+'/'+parseInt(d);});
       const inner = document.createElement('div');
@@ -3777,35 +3868,51 @@ function toggleRole() {
       inner.appendChild(labelEl);
       const hintEl = document.createElement('div');
       hintEl.style.cssText = 'font-size:11px;color:var(--muted);margin-bottom:10px';
-      hintEl.textContent = '可同時指派多個角色，例如 IT＋Rally；再點一次取消選取。';
+      hintEl.textContent = '可同時指派多個特殊角色（例如 IT＋Rally）；Host＝純接待，選了就不掛特殊角色。';
       inner.appendChild(hintEl);
 
       const chipOn  = function(b){ b.style.cssText = 'flex:1;min-width:72px;padding:12px;border:1.5px solid var(--teal);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:var(--teal);color:#FFF'; };
       const chipOff = function(b){ b.style.cssText = 'flex:1;min-width:72px;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:#FFF;color:var(--black)'; };
-      const btns = document.createElement('div');
-      btns.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap';
-      roles.forEach(function(r) {
-        const btn = document.createElement('button');
-        btn.textContent = r;
-        (selected[r] ? chipOn : chipOff)(btn);
-        btn.onclick = function() {
-          if (selected[r]) delete selected[r]; else selected[r] = true;
-          (selected[r] ? chipOn : chipOff)(btn);
-        };
-        btns.appendChild(btn);
-      });
-      inner.appendChild(btns);
-      // Manager：只能由管理者指派（點 1），夥伴端看不到；也可與其他角色並存
+      // Manager：只能由管理者指派（點 1），夥伴端看不到。先建立 mgrBtn，供 Host 互斥時同步外觀
       const mgrOn  = function(b){ b.style.cssText = 'width:100%;padding:12px;border:1.5px solid var(--teal);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:var(--teal);color:#FFF;margin-bottom:12px'; };
       const mgrOff = function(b){ b.style.cssText = 'width:100%;padding:12px;border:1.5px solid var(--teal);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:#FFF;color:var(--teal);margin-bottom:12px'; };
       const mgrBtn = document.createElement('button');
       mgrBtn.textContent = 'Manager（管理者專屬）';
-      (selected['Manager'] ? mgrOn : mgrOff)(mgrBtn);
-      mgrBtn.onclick = function() {
-        if (selected['Manager']) delete selected['Manager']; else selected['Manager'] = true;
+      // 角色 chip：Host 在最前（接待＝無特殊角色），其餘依固定順序 主持→Rally→IT 排
+      const orderedRoles = roles.slice().sort(function(a, b){ return _schedRoleRank_(a) - _schedRoleRank_(b); });
+      const chipRoles = ['Host'].concat(orderedRoles);
+      const chipBtns = {};
+      const syncChips_ = function() {
+        chipRoles.forEach(function(r){ (selected[r] ? chipOn : chipOff)(chipBtns[r]); });
         (selected['Manager'] ? mgrOn : mgrOff)(mgrBtn);
       };
+      const btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap';
+      chipRoles.forEach(function(r) {
+        const btn = document.createElement('button');
+        btn.textContent = r;
+        chipBtns[r] = btn;
+        btn.onclick = function() {
+          if (r === 'Host') {
+            const turnOn = !selected['Host'];
+            Object.keys(selected).forEach(function(k){ delete selected[k]; }); // Host＝純接待，與所有角色互斥
+            if (turnOn) selected['Host'] = true;
+          } else {
+            if (selected[r]) delete selected[r]; else selected[r] = true;
+            delete selected['Host']; // 選了特殊角色就不是純 Host
+          }
+          syncChips_();
+        };
+        btns.appendChild(btn);
+      });
+      inner.appendChild(btns);
+      mgrBtn.onclick = function() {
+        if (selected['Manager']) delete selected['Manager']; else selected['Manager'] = true;
+        delete selected['Host']; // Manager 是指派角色，不是純 Host
+        syncChips_();
+      };
       inner.appendChild(mgrBtn);
+      syncChips_();
       // 儲存指派（一次送出所有選取角色）
       const saveBtn = document.createElement('button');
       saveBtn.style.cssText = 'width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;background:var(--black);color:var(--yellow);margin-bottom:8px';
@@ -3854,16 +3961,24 @@ function toggleRole() {
       if (modal) modal.style.display = 'none';
       const period = schedOverviewData && schedOverviewData.period;
       if (!period || !adminToken) { showToast('請先登入 Admin'); return; }
-      const roles = (rolesArr || []).filter(Boolean);
+      const roles = (rolesArr || []).filter(Boolean).filter(function(r){ return r !== 'Host'; }); // Host＝純接待，不存成角色（空＝available）
       const joined = roles.join('·');
-      // 樂觀更新：就地改該格，不整頁重載，可連續快速指派（#3）
-      schedApplyLocalCell_(date, session, rowIndex, { adminRole: joined, status: joined ? 'assigned' : 'available' });
+      // 此人本機 grid 是否已在該格？新加入的人沒有 cell，樂觀更新無效，改在後端成功後重抓
+      const key = date + '|' + session;
+      const existsLocal = !!(schedOverviewData.grid && schedOverviewData.grid[key] && schedOverviewData.grid[key].some(function(c){ return c.personRowIndex === rowIndex; }));
+      if (existsLocal) {
+        // 樂觀更新：就地改該格，不整頁重載，可連續快速指派（#3）
+        schedApplyLocalCell_(date, session, rowIndex, { adminRole: joined, status: joined ? 'assigned' : 'available' });
+      }
       schedRosterData = null; // 失效「一起服事」名冊快取，下次開該頁重新抓（角色/移除即時反映）
       schedLastLocalEditTs = Date.now(); schedOverviewSig = ''; // 標記剛編輯，並讓下次 poll 必定套用最新
       renderScheduleTab(document.getElementById('mainContent'));
-      showToast(joined ? '已指派：' + roles.join('、') : '已清除指派');
+      showToast(joined ? '已指派：' + roles.join('、') : (existsLocal ? '已清除指派' : '已加入（Host 接待）'));
       google.script.run
-        .withSuccessHandler(function(r) { if (!r || !r.success) { showToast((r && r.error) || '指派失敗，已重新整理'); schedOverviewRefresh(); } })
+        .withSuccessHandler(function(r) {
+          if (!r || !r.success) { showToast((r && r.error) || '指派失敗，已重新整理'); schedOverviewRefresh(); return; }
+          if (!existsLocal) schedOverviewRefresh(); // 新加入的人：本機 grid 沒有，重抓讓他出現在該場
+        })
         .withFailureHandler(function(e) { showToast('錯誤，已重新整理: ' + (e.message||e)); schedOverviewRefresh(); })
         .adminAssignRole(period.periodId, rowIndex, date, session, roles, adminToken);
     }
