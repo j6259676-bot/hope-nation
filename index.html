@@ -773,7 +773,10 @@ function toggleRole() {
         html += '<div class="grid-2" style="margin-bottom:0">';
         html += '<div style="position:relative"><input class="input" id="nameInput' + idx + '" placeholder="姓名" autocomplete="off" value="' + esc(p.name) + '" oninput="nameAC(this,' + idx + ')" onblur="closeACDelayed()"></div>';
         html += '<div style="position:relative"><input class="input" id="ytInput' + idx + '" placeholder="YT 帳號" autocomplete="off" value="' + esc(p.ytId) + '" oninput="nameAC(this,' + idx + ')" onblur="closeACDelayed()"></div>';
-        html += '</div></div></div>';
+        html += '</div>';
+        // 同名確認橫幅容器：靠 DOM 直接填入，不重繪整個 tab（重繪會打斷中文輸入法）
+        html += '<div id="dupWarn' + idx + '" style="margin-top:8px"></div>';
+        html += '</div></div>';
         html += '<div class="grid-3">';
         html += '<select class="input" style="color:' + (p.gender ? 'var(--black)' : 'var(--muted)') + '" onchange="updateRecordPerson(' + idx + ',\'gender\',this.value)">';
         html += '<option value="">性別</option><option value="男"' + (p.gender === '男' ? ' selected' : '') + '>男</option><option value="女"' + (p.gender === '女' ? ' selected' : '') + '>女</option></select>';
@@ -863,13 +866,27 @@ function toggleRole() {
               html += '<div style="text-align:center;margin-bottom:12px"><img src="' + p.photo + '" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid var(--yellow-light);cursor:zoom-in" onclick="openPhotoLightbox(\'' + bigUrl + '\')" alt="點擊放大"></div>';
             }
             html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">性別: ' + (p.gender || '未知') + ' · 最近更新: ' + (p.date || '') + ' · 記錄者: ' + esc(p.submitter) + '</div>';
+            // identity 靠姓名字串，同名的人會被歸成同一張卡；無法安全自動拆開，改成提醒夥伴自己判讀
+            if (p.ambiguous) {
+              html += '<div style="display:flex;gap:8px;align-items:flex-start;background:#FFF6E0;border:1.5px solid #E8C765;border-radius:12px;padding:10px 12px;margin-bottom:10px">'
+                    + '<span style="color:#9A7B16;flex-shrink:0;display:flex">' + lucide('alert-triangle', 15) + '</span>'
+                    + '<span style="font-size:12px;color:#6B5610;font-weight:700;line-height:1.5">這個名字底下的紀錄'
+                    + esc(p.ambiguous.reason) + '不一致（' + esc((p.ambiguous.values || []).join('、'))
+                    + '），可能不只一位家人。請對照每筆下方的地區判讀。</span></div>';
+            }
             if (p.notes && p.notes.length > 0) {
               const showAll = expandedNotes.has(idx);
               const visible = showAll ? p.notes : p.notes.slice(0, 3);
               visible.forEach(n => {
                 const metaParts = [n.date, n.submitter ? esc(n.submitter) : ''].filter(Boolean);
                 const meta = metaParts.join(' · ') + (n.session ? ' ' + sessionTagHTML(n.session) : '');
-                html += '<div class="note-item"><div style="font-size:11px;color:var(--yellow-dark);margin-bottom:3px;font-weight:500">' + meta + '</div><div style="font-size:14px;color:#444;line-height:1.5">' + esc(n.text) + '</div></div>';
+                // 卡片有歧義時，每筆補上當時記錄的性別/地區，讓夥伴一眼分得出哪幾筆是同一位
+                let sub = '';
+                if (p.ambiguous) {
+                  const bits = [n.gender, n.country, n.city].filter(Boolean).map(esc).join(' · ');
+                  if (bits) sub = '<div style="font-size:11px;color:#9A7B16;margin-bottom:3px;font-weight:700">' + bits + '</div>';
+                }
+                html += '<div class="note-item"><div style="font-size:11px;color:var(--yellow-dark);margin-bottom:3px;font-weight:500">' + meta + '</div>' + sub + '<div style="font-size:14px;color:#444;line-height:1.5">' + esc(n.text) + '</div></div>';
               });
               if (p.notes.length > 3) {
                 if (!showAll) {
@@ -1660,10 +1677,73 @@ function toggleRole() {
       if (val.length < 2) { closeAC(); return; }
       _acTimer = setTimeout(function() {
         google.script.run
-          .withSuccessHandler(function(items) { showACDrop(input, items, idx); })
+          .withSuccessHandler(function(items) {
+            showACDrop(input, items, idx);
+            if (field === 'name') _checkDuplicateName_(idx, val, items);
+          })
           .withFailureHandler(function() { closeAC(); })
           .getPersonSuggestions(val);
       }, 150);
+    }
+
+    // ===== 同名確認：在輸入當下就把「同名不同人」分開 =====
+    // 事後才發現同名的人已被歸成一張卡就來不及了（Lee 曾累積成 4 個人），
+    // 所以名字一打完就問清楚。橫幅用 DOM 直接填，避免重繪打斷輸入法。
+    function _checkDuplicateName_(idx, typed, items) {
+      const box = document.getElementById('dupWarn' + idx);
+      if (!box) return;
+      const name = (typed || '').trim();
+      const person = recordPersons[idx];
+      if (!person) return;
+      // 已經表態過（就是這位／已改名）就不再打擾
+      if (person._dupAnswered === name.toLowerCase()) return;
+      const hit = (items || []).filter(function(it) {
+        return String(it.name || '').trim().toLowerCase() === name.toLowerCase();
+      })[0];
+      if (!name || !hit) { box.replaceChildren(); return; }
+
+      const meta = [hit.gender, hit.country, hit.city, hit.ytId ? 'YT ' + hit.ytId : '']
+        .filter(Boolean).map(esc).join(' · ');
+      let h = '<div style="background:#F2F6F8;border:1.5px solid #C3D4DC;border-radius:12px;padding:10px 12px">';
+      h += '<div style="font-size:12px;color:var(--steel);font-weight:700;line-height:1.5;margin-bottom:8px">'
+         + '系統裡已經有「' + esc(hit.name) + '」' + (meta ? '（' + meta + '）' : '') + '，是同一位嗎？</div>';
+      h += '<div style="display:flex;gap:8px">';
+      h += '<button onclick="dupResolve(' + idx + ',1)" style="flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--border);background:var(--white);font-size:13px;font-weight:700;cursor:pointer">就是這位</button>';
+      h += '<button onclick="dupResolve(' + idx + ',0)" style="flex:1;padding:9px;border-radius:10px;border:1.5px solid #C3D4DC;background:var(--white);font-size:13px;font-weight:700;color:var(--steel);cursor:pointer">不是，另一位同名的</button>';
+      h += '</div></div>';
+      box.replaceChildren();
+      box.insertAdjacentHTML('beforeend', h);
+    }
+
+    function dupResolve(idx, isSame) {
+      const person = recordPersons[idx];
+      const box = document.getElementById('dupWarn' + idx);
+      const input = document.getElementById('nameInput' + idx);
+      if (!person) return;
+      if (isSame) {
+        person._dupAnswered = String(person.name || '').trim().toLowerCase();
+        if (box) box.replaceChildren();
+        return;
+      }
+      // 不是同一位 → 照夥伴既有的「地區+名字」慣例補上區別，這一列一出生就是獨立的人
+      const base = String(person.name || '').trim();
+      const city = String(person.city || '').trim();
+      if (city) {
+        person.name = base + ' ' + city;
+        person._dupAnswered = person.name.toLowerCase();
+        if (input) input.value = person.name;
+        if (box) box.replaceChildren();
+        showToast('已改成「' + person.name + '」以區分');
+      } else {
+        person._dupAnswered = base.toLowerCase();
+        if (box) {
+          box.replaceChildren();
+          box.insertAdjacentHTML('beforeend',
+            '<div style="background:#FFF6E0;border:1.5px solid #E8C765;border-radius:12px;padding:10px 12px;font-size:12px;color:#6B5610;font-weight:700;line-height:1.5">'
+            + '請在姓名後面加上地區以便區分，例如「' + esc(base) + ' 新竹」。填了城市欄的話也可以再按一次，系統會自動加上。</div>');
+        }
+        if (input) { input.focus(); }
+      }
     }
 
     function showACDrop(input, items, idx) {
@@ -1701,6 +1781,8 @@ function toggleRole() {
       if (p.ytId) recordPersons[personIdx].ytId = p.ytId;
       if (p.country) recordPersons[personIdx].country = p.country;
       if (p.city) recordPersons[personIdx].city = p.city;
+      // 從候選卡片選人＝明確指定就是這位，不必再問一次同名確認
+      recordPersons[personIdx]._dupAnswered = String(p.name || '').trim().toLowerCase();
       closeAC();
       renderRecordTab(document.getElementById('mainContent'));
     }
