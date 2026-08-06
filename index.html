@@ -520,6 +520,11 @@
     let schedUnfilledData = null;    // { unfilled: [{rowIndex, name}] }
     let schedOverviewSig = '';       // 上次總覽資料簽章，poll 比對有無變化用
     let schedOverviewPollTimer = null; // 總覽自動同步 interval
+    // 多期並行（2026-08-06）：可同時有兩期 open（例：8 月已發布仍在收申請調整、9-10 月正在填）
+    // schedPeriodId = null 代表「跟著後端 active 期」＝舊行為；只有一期時不顯示切換列。
+    let schedPeriods = null;         // listSchedulePeriods() 結果 [{periodId, label, startDate, endDate, published, isActive}]
+    let schedPeriodsLoading = false;
+    let schedPeriodId = null;        // 目前檢視的期別（null = active）
     let schedLastLocalEditTs = 0;    // 最近一次本機樂觀編輯時間（poll 暫避，避免蓋掉自己的編輯）
 
     function renderNav() {
@@ -2548,7 +2553,11 @@ function toggleRole() {
       if (!schedViewData) { return h + (schedLoading ? '<div style="text-align:center;padding:40px;color:var(--muted)">載入中…</div>' : '<div style="text-align:center;padding:40px;color:var(--muted)">載入失敗，請重新整理</div>'); }
       const period = schedViewData.period;
       if (!period) { return h + '<div class="card" style="text-align:center;color:var(--muted);padding:32px"><div style="margin-bottom:8px">' + lucide('calendar', 28) + '</div><div>目前沒有開放的排班期別</div></div>'; }
-      h += '<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px">' + period.startDate + ' — ' + period.endDate + '</div>';
+      // 期別切換（多期並行才出現；只有一期時完全維持舊版樣貌）
+      if (schedPeriods === null && !schedPeriodsLoading) schedLoadPeriods();
+      h += renderSchedPeriodSwitch_(period);
+      const pStatus = period.published ? ' · 已發布' : ' · 填寫中';
+      h += '<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px">' + period.startDate + ' — ' + period.endDate + pStatus + '</div>';
       const tabs = [
         { key:'fill', label:'我的服事' },
         { key:'roster', label:'一起服事' }
@@ -2574,6 +2583,32 @@ function toggleRole() {
       if (schedSubView === 'roster') return h + renderSchedRoster();
       if (schedSubView === 'overview') return h + renderSchedAdminOverview();
       return h;
+    }
+
+    // 期別 chip 列。樣式刻意跟下方「場次」chip 完全一致（同一個手勢，零學習成本）。
+    // 只有一期（或清單還沒回來）時回空字串 → 畫面與舊版一模一樣。
+    function renderSchedPeriodSwitch_(period) {
+      if (!schedPeriods || schedPeriods.length < 2) return '';
+      const curId = schedPeriodId || (period && period.periodId) || '';
+      let h = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap">';
+      h += '<span style="font-size:12px;color:var(--muted);font-weight:700;margin-right:2px">期別</span>';
+      schedPeriods.forEach(function(p) {
+        const on = p.periodId === curId;
+        // 未發布＝還在收意願，加一個小綠點提示「這期要填」
+        const dot = p.published ? '' : '<span style="width:6px;height:6px;border-radius:50%;background:' + (on ? '#8FD69C' : '#7FB88A') + ';display:inline-block"></span>';
+        h += '<button onclick="schedSetPeriod(\'' + esc(p.periodId) + '\')" style="padding:6px 13px;border-radius:16px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid;display:inline-flex;align-items:center;gap:5px;' + (on ? 'background:var(--black);color:var(--yellow);border-color:var(--black);' : 'background:#FFF;color:var(--muted);border-color:var(--border);') + '">' + esc(p.label || p.startDate) + dot + '</button>';
+      });
+      h += '</div>';
+      return h;
+    }
+
+    // 目前檢視的是不是後端標記的 active 期（＝最新那期）
+    function schedIsViewingActive_(period) {
+      if (!schedPeriods || schedPeriods.length < 2) return true;
+      const act = schedPeriods.filter(function(p) { return p.isActive; })[0];
+      if (!act) return true;
+      const curId = schedPeriodId || (period && period.periodId) || '';
+      return act.periodId === curId;
     }
 
     // 場次焦點 chip 列（全部 / 各場次）。預設「全部」＝不過濾。
@@ -2663,7 +2698,13 @@ function toggleRole() {
       let h = '';
 
       // ── 已發布橫幅（點 4：發布後改動走申請調整）──
-      if (period.published) {
+      // 多期並行時，若正在看的不是最新那期，改藍色橫幅明示「你在看舊期」，避免誤以為現在要填這期
+      const viewingActive = schedIsViewingActive_(period);
+      if (!viewingActive) {
+        const plabel = (schedPeriods || []).filter(function(p) { return p.periodId === period.periodId; })[0];
+        const pname = (plabel && plabel.label) ? plabel.label : (period.startDate + ' — ' + period.endDate);
+        h += '<div style="background:#EEF3F8;border:1.5px solid #B9CBDD;border-radius:12px;padding:12px 14px;margin-bottom:12px"><div style="font-size:14px;font-weight:700;color:#33506E;margin-bottom:3px">你正在看 ' + esc(pname) + '的班表' + (period.published ? '（已發布）' : '') + '</div><div style="font-size:12px;color:#48688A;line-height:1.6">' + (period.published ? '這期已經定案。要更動請點該場次送出「申請調整」，管理者會再跟你確認。' : '這期還在收意願。要填最新一期請點上方的期別切換。') + '</div></div>';
+      } else if (period.published) {
         h += '<div style="background:#E8F5E9;border:1.5px solid #A5D6A7;border-radius:12px;padding:12px 14px;margin-bottom:12px"><div style="font-size:14px;font-weight:700;color:#2E7D32;margin-bottom:3px">✓ 排班已發布</div><div style="font-size:12px;color:#3A6B45;line-height:1.6">下方是最終安排。若需更動，點該場次送出「申請調整」，管理者收到後會再跟你確認，不會直接改掉已公布的班表。</div></div>';
       }
 
@@ -2691,7 +2732,7 @@ function toggleRole() {
 
       // ── 區隔：以上是「我這期的服事」（含管理者指派），以下是「我的排班意願」 ──
       h += '<div style="display:flex;align-items:center;gap:10px;margin:18px 0 12px"><div style="flex:1;height:1px;background:var(--border)"></div><span style="font-size:13px;font-weight:700;color:var(--black)">我的排班意願</span><div style="flex:1;height:1px;background:var(--border)"></div></div>';
-      h += '<div style="font-size:12px;color:var(--muted);margin:-4px 0 12px;text-align:center">點下方場次設定你能來的時間（這裡只記你的意願，不會被指派改動）</div>';
+      h += '<div style="font-size:12px;color:var(--muted);margin:-4px 0 12px;text-align:center">' + (period.published ? '已發布期間，點場次會送出「申請調整」' : '點下方場次設定你能來的時間（這裡只記你的意願，不會被指派改動）') + '</div>';
 
       // ── 填寫說明 ──
       h += renderSchedHelp();
@@ -3008,6 +3049,41 @@ function toggleRole() {
       if (schedSubView === 'overview' && !schedOverviewData && !schedOverviewLoading) schedLoadOverview();
     }
 
+    // 開放中的期別清單（多期並行時才會有 2 筆以上）。只在進排班 tab 時載一次。
+    function schedLoadPeriods() {
+      schedPeriodsLoading = true;
+      google.script.run
+        .withSuccessHandler(function(d) {
+          schedPeriodsLoading = false;
+          schedPeriods = (d && d.periods) ? d.periods : [];
+          // 預設停在後端標記的 active 那期
+          if (!schedPeriodId) {
+            const act = schedPeriods.filter(function(p) { return p.isActive; })[0];
+            if (act) schedPeriodId = act.periodId;
+          }
+          renderScheduleTab(document.getElementById('mainContent'));
+        })
+        .withFailureHandler(function() {
+          // 取不到清單不影響主流程：schedPeriodId 維持 null＝跟著後端 active，行為同舊版
+          schedPeriodsLoading = false;
+          schedPeriods = [];
+        })
+        .listSchedulePeriods();
+    }
+
+    // 切換期別：清掉三個 sub-view 的快取後重載（各期資料完全獨立）
+    function schedSetPeriod(periodId) {
+      if (periodId === schedPeriodId) return;
+      schedPeriodId = periodId;
+      schedViewData = null; schedLocalEntries = {}; schedPending = {};
+      schedRosterData = null; schedOverviewData = null; schedUnfilledData = null;
+      schedOverviewSig = ''; schedSubmitState = '';
+      renderScheduleTab(document.getElementById('mainContent'));
+      if (schedSubView === 'roster') schedLoadRoster();
+      else if (schedSubView === 'overview') schedLoadOverview();
+      else schedLoadView();
+    }
+
     function schedLoadView() {
       schedLoading = true;
       renderScheduleTab(document.getElementById('mainContent'));
@@ -3026,7 +3102,7 @@ function toggleRole() {
           renderScheduleTab(document.getElementById('mainContent'));
           showToast('載入失敗: ' + (e.message||e));
         })
-        .getScheduleViewForUser(schedPersonRow);
+        .getScheduleViewForUser(schedPersonRow, schedPeriodId);
     }
 
     // 公開名冊（點 7）：所有夥伴可看某主日各場一起服事的人
@@ -3043,7 +3119,7 @@ function toggleRole() {
           renderScheduleTab(document.getElementById('mainContent'));
           showToast('載入失敗: ' + (e.message||e));
         })
-        .getPublicRoster(null);
+        .getPublicRoster(schedPeriodId);
     }
 
     function renderSchedRoster() {
@@ -3319,7 +3395,7 @@ function toggleRole() {
           renderScheduleTab(document.getElementById('mainContent'));
           showToast('載入總覽失敗: ' + (e && e.message ? e.message : '未知錯誤'));
         })
-        .getAdminOverviewAll();
+        .getAdminOverviewAll(schedPeriodId);
     }
 
     function schedOverviewSwitchView(v) {
@@ -3364,7 +3440,7 @@ function toggleRole() {
           renderScheduleTab(document.getElementById('mainContent'));
         })
         .withFailureHandler(function() {})
-        .getAdminOverviewAll();
+        .getAdminOverviewAll(schedPeriodId);
     }
 
     // 發布 / 取消發布 Final 排班（點 4）
