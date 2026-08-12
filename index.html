@@ -325,6 +325,14 @@
 
   <div class="nav"><div class="nav-inner" id="navBar"></div></div>
   <div class="main" id="mainContent"></div>
+  <!-- 常駐版本標示。目的是讓「夥伴手上是哪一版」隨時查得到，而不是只在更新那
+       兩秒閃一次 —— 錯過就又回到不確定的狀態。夥伴回報問題時第一句可以問
+       「你畫面上寫幾號」，立刻分辨是程式壞了還是卡在舊版。 -->
+  <div id="hnVersionFooter" style="
+    text-align:center; font-size:11px; color:var(--muted); letter-spacing:.03em;
+    padding:20px 12px calc(env(safe-area-inset-bottom) + 24px);">
+    版本 <span class="hn-ver">—</span>
+  </div>
   <div id="toast" class="toast hidden"></div>
   <div id="loading" class="loading-overlay hidden">載入中...</div>
   <div id="acDrop" style="display:none;position:fixed;z-index:300;background:var(--black);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.35);overflow:hidden;max-height:320px;overflow-y:auto;width:260px"></div>
@@ -359,16 +367,23 @@
       };
 
       function callBackend(name, args) {
+        // 記錄「在飛的請求數」。自動更新的重載閘門要靠它判斷現在動安不安全：
+        // 重載若落在送出排班意願的當下，那筆會無聲消失。
+        window.__hnInFlight = (window.__hnInFlight | 0) + 1;
+        var settled = function () {
+          window.__hnInFlight = Math.max(0, (window.__hnInFlight | 0) - 1);
+        };
         return fetch(API_BASE, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 簡單請求，避開 CORS preflight
           body: JSON.stringify({ action: name, args: args || [], k: staffKey })
         }).then(function (r) { return r.json(); })
           .then(function (res) {
+            settled();
             // 後端金鑰閘門擋下 → 顯示引導頁（函式宣告在下方，呼叫時已存在）
             if (res && res.needKey && typeof showKeyGate === 'function') showKeyGate();
             return res;
-          });
+          }, function (err) { settled(); throw err; });
       }
 
       function makeRunner() {
@@ -502,6 +517,16 @@
     let schedPending = {};      // 待送出的 entries batch
     let schedBatchTimer = null;
     let schedLoading = false;
+
+    // 自動更新的重載閘門用：現在動安不安全？
+    // 「有待送出的排班意願」或「有請求在飛」都算不安全 —— 這兩種狀態下重載，
+    // 夥伴剛點的那幾週會無聲消失。更新會等到這裡回 false 才動。
+    window.__hnIsBusy = function () {
+      try {
+        if ((window.__hnInFlight | 0) > 0) return true;
+        return Object.keys(schedPending).length > 0;
+      } catch (e) { return false; }
+    };
     let schedMyFixedSessions = JSON.parse(localStorage.getItem('schedMyFixedSessions') || 'null'); // null=未設定, []=空
     let schedMyFixedRoles    = JSON.parse(localStorage.getItem('schedMyFixedRoles')    || '[]');
     let schedStaffList = null;  // admin 管理名單
@@ -4222,6 +4247,180 @@ function toggleRole() {
         schedPollOverview_();
       }
     });
+  </script>
+
+  <script>
+    // ============================================================
+    // service worker 註冊 ＋ 更新機制
+    // 規格：my-agent/100_Todo/projects/hope-nation-perf/SPEC.md §3-A
+    //
+    // 三件事：
+    //   1. 外殼快取 —— 第二次以後開啟不必等網路
+    //   2. 自動更新 —— 不出現按鈕。理由是 iOS 加到主畫面的 PWA 常常不觸發
+    //      controllerchange，按鈕方案會「按了沒反應」（Family Hub 的教訓）
+    //   3. 自我移除開關 —— 遠端把夥伴退回「沒有 service worker」的行為
+    //
+    // 註冊失敗一律吞掉：不支援的環境自動回到現在的行為（照常從網路載入）。
+    // 沒變快，但不會壞。
+    // ============================================================
+    (function () {
+      // 這三個值必須同步：本檔的 VERSION、sw.js 的 VERSION、version.json 的 version
+      var VERSION = '2026-08-12·da1a9f';
+      var applying = false;
+
+      function showUpdatedToast(ver) {
+        var el = document.createElement('div');
+        el.setAttribute('role', 'status');
+        el.style.cssText = [
+          'position:fixed', 'left:50%', 'transform:translateX(-50%)',
+          'bottom:calc(env(safe-area-inset-bottom) + 20px)',
+          'z-index:99999', 'background:#1D292E', 'color:#fff',
+          'padding:11px 18px', 'border-radius:999px',
+          'font-size:13px', 'font-weight:500', 'letter-spacing:.02em',
+          'box-shadow:0 8px 24px rgba(0,0,0,.28)',
+          'max-width:calc(100vw - 32px)', 'text-align:center',
+          'opacity:0', 'transition:opacity .22s ease'
+        ].join(';');
+        el.textContent = '已更新到最新版本（' + ver + '）';
+        document.body.appendChild(el);
+        requestAnimationFrame(function () { el.style.opacity = '1'; });
+        setTimeout(function () {
+          el.style.opacity = '0';
+          setTimeout(function () { el.remove(); }, 300);
+        }, 2600);
+      }
+
+      function register() {
+        if (!('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.register('sw.js').catch(function (e) {
+          console.warn('service worker 註冊失敗（不影響使用）:', e);
+        });
+      }
+
+      // 自我移除：註銷所有 service worker、清空所有快取，回到今天的行為。
+      // 這是這個切片的回滾機制 —— 後端在我們手上，service worker 在夥伴手上，
+      // 所以它比後端回滾更重要。
+      function selfRemove() {
+        if (!('serviceWorker' in navigator)) return;
+        try { sessionStorage.setItem('hnRemoved', '1'); } catch (e) {}
+        var removedSomething = false;
+        navigator.serviceWorker.getRegistrations()
+          .then(function (regs) {
+            if (regs.length) removedSomething = true;
+            return Promise.all(regs.map(function (r) { return r.unregister(); }));
+          })
+          .then(function () { return caches.keys(); })
+          .then(function (keys) {
+            if (keys.length) removedSomething = true;
+            return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+          })
+          .then(function () {
+            // 只有真的移除了東西才重載。本來就乾淨還重載，只是讓畫面白閃一下 ——
+            // 而停止鍵是主日出事時用的，那個當下畫面一直閃只會讓人更慌。
+            // 這也保證了「最多重載一次」：重載後已無註冊與快取，就不會再重載。
+            if (!removedSomething) return;
+            location.reload();
+          })
+          .catch(function (e) { console.warn('自我移除失敗:', e); });
+      }
+
+      function isBusy() {
+        try {
+          return typeof window.__hnIsBusy === 'function' ? window.__hnIsBusy() : false;
+        } catch (e) { return false; }
+      }
+
+      // 等到安全時刻才重載。不安全＝有待送出的排班意願，或有請求在飛。
+      // 排班填寫有 500ms 自動送出，所以這個等待實務上感覺不到。
+      function reloadWhenSafe(tries) {
+        tries = tries || 0;
+        if (isBusy() && tries < 60) {          // 最多等 30 秒
+          setTimeout(function () { reloadWhenSafe(tries + 1); }, 500);
+          return;
+        }
+        try { sessionStorage.setItem('hnJustUpdated', '1'); } catch (e) {}
+        location.reload();
+      }
+
+      // 重載上限。防的是這個情境：重載後快取沒換成功，頁面版本仍是舊的、
+      // 版本檔已經是新的 → 又偵測到不一致 → 再重載 → 無限迴圈。
+      // 那會發生在夥伴的手機上，比慢嚴重太多。試三次還沒換過去就放棄，
+      // 停在舊版（慢但可用），把問題留給自我移除開關處理。
+      function tooManyAttempts(target) {
+        var key = 'hnUpdTries_' + target;
+        var n = 0;
+        try { n = parseInt(sessionStorage.getItem(key) || '0', 10) || 0; } catch (e) {}
+        if (n >= 3) {
+          console.warn('已重載 ' + n + ' 次仍停在 ' + VERSION + '，放棄更新到 ' + target);
+          return true;
+        }
+        try { sessionStorage.setItem(key, String(n + 1)); } catch (e) {}
+        return false;
+      }
+
+      function applyUpdate(target) {
+        if (applying) return;
+        if (tooManyAttempts(target || 'unknown')) return;
+        applying = true;
+        navigator.serviceWorker.getRegistration()
+          .then(function (reg) {
+            if (!reg) { reloadWhenSafe(); return; }
+            return reg.update().catch(function () {}).then(function () {
+              // 讓新的 service worker 立刻接手。不等 controllerchange —— 那個事件
+              // 在 iOS 主畫面 PWA 上常常不發，等它就會卡住。
+              var sw = reg.waiting || reg.installing;
+              if (sw) {
+                try { sw.postMessage({ type: 'SKIP_WAITING' }); } catch (e) {}
+              }
+              setTimeout(function () { reloadWhenSafe(); }, 800);
+            });
+          })
+          .catch(function () { reloadWhenSafe(); });
+      }
+
+      function checkVersion() {
+        var removed = false;
+        try { removed = sessionStorage.getItem('hnRemoved') === '1'; } catch (e) {}
+
+        fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+          .then(function (r) { return r.json(); })
+          .then(function (v) {
+            if (v && v.removeServiceWorker) { selfRemove(); return; }
+            // 移除旗標收回了 → 清掉本機狀態，恢復正常註冊
+            if (removed) {
+              try { sessionStorage.removeItem('hnRemoved'); } catch (e) {}
+            }
+            register();
+            if (v && v.version && v.version !== VERSION) applyUpdate(v.version);
+          })
+          .catch(function () {
+            // 網路拿不到版本檔（離線等）→ 照常註冊，維持現有行為
+            if (!removed) register();
+          });
+      }
+
+      window.addEventListener('load', function () {
+        // 版本標示由這裡填 —— 單一來源，避免「版本號說變了、內容其實沒變」。
+        // 用 class 而非 id：可能有一處以上要顯示同一個版本號。
+        var labels = document.querySelectorAll('.hn-ver');
+        for (var i = 0; i < labels.length; i++) labels[i].textContent = VERSION;
+
+        var justUpdated = false;
+        try {
+          justUpdated = sessionStorage.getItem('hnJustUpdated') === '1';
+          if (justUpdated) sessionStorage.removeItem('hnJustUpdated');
+        } catch (e) {}
+        if (justUpdated) showUpdatedToast(VERSION);
+
+        checkVersion();
+      });
+
+      // 重新打開 App / 切回分頁時再查一次 —— 夥伴一週用一次，
+      // 只在載入時查一次的話，新版可能永遠送不到他手上
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') checkVersion();
+      });
+    })();
   </script>
 
 </body>
