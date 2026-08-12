@@ -7,8 +7,18 @@
 // stale-while-revalidate（先給舊資料），而那在規格階段已經被否決，
 // 理由是排班是協調型工具，錯的資料比慢的資料傷害大。
 
-const VERSION = '2026-08-12·da1a9f';
-const SHELL_CACHE = 'hn-shell-' + VERSION;
+const VERSION = '2026-08-12·74d798';
+// 快取名帶「作用範圍」，因為正式站與測試站同網域不同路徑，共用一個 origin。
+// 不區分的話，一邊清快取會把另一邊的也清掉 —— 停止鍵應該只做它該做的事。
+const SCOPE_KEY = self.location.pathname
+  .replace(/\/[^/]*$/, '')
+  .replace(/[^a-z0-9]+/gi, '-')
+  .replace(/^-+|-+$/g, '') || 'root';
+const CACHE_PREFIX = 'hn-shell-' + SCOPE_KEY + '-';
+const SHELL_CACHE = CACHE_PREFIX + VERSION;
+
+// 2026-08-12 之前的舊命名沒有作用範圍（hn-shell-<版本>），順手清掉
+const LEGACY_CACHE = /^hn-shell-\d{4}-\d{2}-\d{2}[·]/;
 
 const SHELL_ASSETS = [
   './',
@@ -43,7 +53,11 @@ self.addEventListener('activate', (event) => {
       .then((names) =>
         Promise.all(
           names
-            .filter((n) => n.startsWith('hn-shell-') && n !== SHELL_CACHE)
+            .filter(
+              (n) =>
+                (n.startsWith(CACHE_PREFIX) || LEGACY_CACHE.test(n)) &&
+                n !== SHELL_CACHE
+            )
             .map((n) => caches.delete(n))
         )
       )

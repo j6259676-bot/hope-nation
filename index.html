@@ -4265,7 +4265,7 @@ function toggleRole() {
     // ============================================================
     (function () {
       // 這三個值必須同步：本檔的 VERSION、sw.js 的 VERSION、version.json 的 version
-      var VERSION = '2026-08-12·da1a9f';
+      var VERSION = '2026-08-12·74d798';
       var applying = false;
 
       function showUpdatedToast(ver) {
@@ -4304,15 +4304,25 @@ function toggleRole() {
         if (!('serviceWorker' in navigator)) return;
         try { sessionStorage.setItem('hnRemoved', '1'); } catch (e) {}
         var removedSomething = false;
-        navigator.serviceWorker.getRegistrations()
-          .then(function (regs) {
-            if (regs.length) removedSomething = true;
-            return Promise.all(regs.map(function (r) { return r.unregister(); }));
+        // 只動「這個頁面作用範圍內」的東西。getRegistrations() 會抓到整個網域下
+        // 所有 service worker，清快取也是清全部 —— 同網域若還有別的路徑（例如
+        // 測試站），會被一起清掉。停止鍵應該只做它該做的事。
+        var scopeKey = location.pathname
+          .replace(/\/[^/]*$/, '')
+          .replace(/[^a-z0-9]+/gi, '-')
+          .replace(/^-+|-+$/g, '') || 'root';
+        var cachePrefix = 'hn-shell-' + scopeKey + '-';
+        navigator.serviceWorker.getRegistration()
+          .then(function (reg) {
+            if (!reg) return;
+            removedSomething = true;
+            return reg.unregister();
           })
           .then(function () { return caches.keys(); })
           .then(function (keys) {
-            if (keys.length) removedSomething = true;
-            return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            var mine = keys.filter(function (k) { return k.indexOf(cachePrefix) === 0; });
+            if (mine.length) removedSomething = true;
+            return Promise.all(mine.map(function (k) { return caches.delete(k); }));
           })
           .then(function () {
             // 只有真的移除了東西才重載。本來就乾淨還重載，只是讓畫面白閃一下 ——
