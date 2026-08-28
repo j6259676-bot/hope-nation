@@ -507,6 +507,10 @@
     // === Schedule Tab state ===
     let schedPersonRow = parseInt(localStorage.getItem('schedPersonRow') || '0');
     let schedPersonName = localStorage.getItem('schedPersonName') || '';
+    // 身分改綁 staffId（名單上不隨列號變動的碼）。列號只是拿來顯示/暫存，寫入一律用 staffId。
+    let schedStaffId = localStorage.getItem('schedStaffId') || '';
+    let schedIdentityChecked = false;   // 這次開啟有沒有跟伺服器對過帳
+    let schedIdentityNotice = '';       // 對不上時給夥伴看的說明
     let schedViewData = null;   // { period, slots, entries }
     let schedLocalEntries = {}; // 本機即時狀態（key: "date|session"）
     let schedSubView = 'fill';  // 'fill' | 'mine'
@@ -2507,6 +2511,13 @@ function toggleRole() {
     // === Schedule Tab ===
     // ============================================================
 
+    // 名單提示（為什麼要重選名字）— 顯示在選人畫面上方
+    function _schedIdentityNoticeHtml_() {
+      if (!schedIdentityNotice) return '';
+      return '<div style="background:#FFF8E6;border:1.5px solid #FFCC32;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.6;color:#5A4A00">'
+        + esc(schedIdentityNotice) + '</div>';
+    }
+
     function renderSchedPersonPicker() {
       // ⚠️ input 本身不在 innerHtml 裡更新 — 只建一次，之後只更新 #schedACResults
       // 這樣 IME 組字狀態不會被清掉
@@ -2553,7 +2564,7 @@ function toggleRole() {
       }
       const byName = function(a, b){ return a.name.localeCompare(b.name, 'zh-TW'); };
       const chip = function(p) {
-        return '<button onclick="schedSelectPerson(' + p.rowIndex + ',\'' + esc(p.name).replace(/\'/g, "\\'") + '\')" style="padding:11px 16px;border-radius:22px;border:1.5px solid var(--border);background:#FDFCF9;font-size:14px;font-weight:600;color:var(--black);cursor:pointer;min-height:44px">' + esc(p.name) + '</button>';
+        return '<button onclick="schedSelectPerson(' + p.rowIndex + ',\'' + esc(p.name).replace(/\'/g, "\\'") + '\',\'' + (p.staffId || '') + '\')" style="padding:11px 16px;border-radius:22px;border:1.5px solid var(--border);background:#FDFCF9;font-size:14px;font-weight:600;color:var(--black);cursor:pointer;min-height:44px">' + esc(p.name) + '</button>';
       };
       let h = '';
       if (q) {
@@ -3050,6 +3061,7 @@ function toggleRole() {
         try { html += renderSchedAdminOverview(); }
         catch(e) { html += '<div style="color:red;padding:16px;background:#FFF5F5;border-radius:8px;margin:8px 0;font-size:12px">渲染錯誤: ' + (e.message||String(e)) + '</div>'; }
       } else if (!schedPersonRow) {
+        html += _schedIdentityNoticeHtml_();
         html += renderSchedPersonPicker();
         if (isAdmin) {
           html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">';
@@ -3127,7 +3139,7 @@ function toggleRole() {
           renderScheduleTab(document.getElementById('mainContent'));
           showToast('載入失敗: ' + (e.message||e));
         })
-        .getScheduleViewForUser(schedPersonRow, schedPeriodId);
+        .getScheduleViewForUser(schedPersonRow, schedPeriodId, schedStaffId);
     }
 
     // 公開名冊（點 7）：所有夥伴可看某主日各場一起服事的人
@@ -3213,17 +3225,56 @@ function toggleRole() {
       _schedRenderResults_();
     }
 
-    function schedSelectPerson(rowIndex, name) {
-      schedPersonRow = rowIndex; schedPersonName = name;
+    function schedSelectPerson(rowIndex, name, staffId) {
+      schedPersonRow = rowIndex; schedPersonName = name; schedStaffId = String(staffId || '');
+      schedIdentityChecked = true; schedIdentityNotice = '';
       schedACInput = ''; schedACResults = []; schedViewData = null; schedLocalEntries = {}; schedSubView = 'fill';
       localStorage.setItem('schedPersonRow', rowIndex); localStorage.setItem('schedPersonName', name);
+      if (schedStaffId) localStorage.setItem('schedStaffId', schedStaffId);
+      else localStorage.removeItem('schedStaffId');
       renderScheduleTab(document.getElementById('mainContent'));
     }
 
     function schedClearPerson() {
-      schedPersonRow = 0; schedPersonName = ''; schedViewData = null; schedLocalEntries = {};
+      schedPersonRow = 0; schedPersonName = ''; schedStaffId = '';
+      schedViewData = null; schedLocalEntries = {}; schedPending = {};
       localStorage.removeItem('schedPersonRow'); localStorage.removeItem('schedPersonName');
-      renderScheduleTab(document.getElementById('mainContent'));
+      localStorage.removeItem('schedStaffId');
+      // 只在排班分頁時重畫；別的分頁時重畫會把畫面內容洗掉
+      if (activeTab === 'schedule') renderScheduleTab(document.getElementById('mainContent'));
+    }
+
+    // 名單被刪過人之後，手機上記住的「第幾列」會指到別人身上。
+    // 所以每次開 App 都跟伺服器對一次帳：對得上就默默升級成 staffId，對不上就請夥伴重選。
+    function schedEnsureIdentity() {
+      if (schedIdentityChecked) return;
+      if (!schedStaffId && !schedPersonRow) { schedIdentityChecked = true; return; }
+      google.script.run
+        .withSuccessHandler(function(r) {
+          schedIdentityChecked = true;
+          if (r && r.success) {
+            schedStaffId = r.staffId; schedPersonRow = r.rowIndex; schedPersonName = r.name;
+            localStorage.setItem('schedStaffId', schedStaffId);
+            localStorage.setItem('schedPersonRow', schedPersonRow);
+            localStorage.setItem('schedPersonName', schedPersonName);
+          } else if (r && r.staleIdentity) {
+            schedIdentityNotice = '服事夥伴名單有更動，請重新點一次你的名字（只要做這一次）。';
+            schedClearPerson();
+            return;
+          }
+          if (activeTab === 'schedule') renderScheduleTab(document.getElementById('mainContent'));
+        })
+        .withFailureHandler(function() { schedIdentityChecked = true; })
+        .resolveStaffIdentity(schedStaffId, schedPersonRow, schedPersonName);
+    }
+
+    // 後端回報身分過期（名單變動）→ 清掉重選，不要讓這筆寫到別人頭上
+    function schedHandleStale_(r) {
+      if (!r || !r.staleIdentity) return false;
+      schedIdentityNotice = (r.error || '名單有更動，請重新選擇你的名字') + '（剛才那筆沒有存進去，重選後請再填一次）';
+      schedPending = {};
+      schedClearPerson();
+      return true;
     }
 
     function schedSwitchView(v) {
@@ -3352,23 +3403,28 @@ function toggleRole() {
         .withSuccessHandler(function(r) {
           hideLoading();
           if (r && r.success) { showToast('已送出：本期都不能服事'); schedViewData = null; schedLocalEntries = {}; schedRosterData = null; schedLoadView(); }
-          else showToast('送出失敗，請重試');
+          else if (schedHandleStale_(r)) showToast('請重新選擇你的名字');
+          else showToast((r && r.error) || '送出失敗，請重試');
         })
         .withFailureHandler(function(e) { hideLoading(); showToast('錯誤: ' + (e.message||e)); })
-        .submitUnavailableAll(period.periodId, schedPersonRow, null);
+        .submitUnavailableAll(period.periodId, schedPersonRow, null, schedStaffId);
     }
 
     function schedQueueSubmit(date, session, status, roles) {
       const period = schedViewData && schedViewData.period; if (!period) return;
       const key = date + '|' + session;
-      schedPending[key] = { periodId: period.periodId, personRowIndex: schedPersonRow, date: date, session: session, status: status || 'available', roles: roles || [], note: '' };
+      schedPending[key] = { periodId: period.periodId, personRowIndex: schedPersonRow, staffId: schedStaffId, date: date, session: session, status: status || 'available', roles: roles || [], note: '' };
       clearTimeout(schedBatchTimer);
       schedBatchTimer = setTimeout(function() {
         const batch = Object.values(schedPending); schedPending = {};
         if (!batch.length) return;
         // 一次送整批（後端 batchSubmitScheduleEntries 只讀表一次，取代每筆各打一次）
         google.script.run
-          .withSuccessHandler(function() { schedRosterData = null; }) // 自己改了意願 → 失效「一起服事」名冊快取，下次開該頁重抓
+          .withSuccessHandler(function(r) {
+            schedRosterData = null; // 自己改了意願 → 失效「一起服事」名冊快取，下次開該頁重抓
+            if (schedHandleStale_(r)) { showToast('名單有更動，請重新選一次名字再填'); return; }
+            if (r && !r.success) showToast('排班儲存失敗: ' + (r.error || '請重試'));
+          })
           .withFailureHandler(function(e) { showToast('排班儲存失敗: ' + (e.message||e)); })
           .batchSubmitScheduleEntries(batch, null);
       }, 500);
@@ -3386,9 +3442,14 @@ function toggleRole() {
       schedLocalEntries[key] = Object.assign({}, cur, { status: 'change_requested', note: trimmed });
       renderScheduleTab(document.getElementById('mainContent'));
       google.script.run
-        .withSuccessHandler(function() { schedRosterData = null; showToast('已送出調整申請，管理者會再跟你確認 ✓'); })
+        .withSuccessHandler(function(r) {
+          schedRosterData = null;
+          if (schedHandleStale_(r)) { showToast('名單有更動，請重新選一次名字'); return; }
+          if (r && !r.success) { showToast('送出失敗: ' + (r.error || '請重試')); return; }
+          showToast('已送出調整申請，管理者會再跟你確認 ✓');
+        })
         .withFailureHandler(function(e) { showToast('送出失敗: ' + (e.message||e)); })
-        .submitScheduleEntry({ periodId: period.periodId, personRowIndex: schedPersonRow, date: date, session: session, status: 'change_requested', roles: cur.roles || [], note: trimmed }, null);
+        .submitScheduleEntry({ periodId: period.periodId, personRowIndex: schedPersonRow, staffId: schedStaffId, date: date, session: session, status: 'change_requested', roles: cur.roles || [], note: trimmed }, null);
     }
 
     // ============================================================
@@ -4234,10 +4295,12 @@ function toggleRole() {
       document.addEventListener('DOMContentLoaded', function() {
         renderNav();
         loadHistorical();
+        schedEnsureIdentity();
       });
     } else {
       renderNav();
       loadHistorical();
+      schedEnsureIdentity();
     }
 
     // 回到前景時，若 admin 正停在排班總覽，立即同步一次（手機切回 app / 切回分頁）
@@ -4265,7 +4328,7 @@ function toggleRole() {
     // ============================================================
     (function () {
       // 這三個值必須同步：本檔的 VERSION、sw.js 的 VERSION、version.json 的 version
-      var VERSION = '2026-08-12·74d798';
+      var VERSION = '2026-08-28·9f3c21';
       var applying = false;
 
       function showUpdatedToast(ver) {

@@ -7,7 +7,7 @@
 // stale-while-revalidate（先給舊資料），而那在規格階段已經被否決，
 // 理由是排班是協調型工具，錯的資料比慢的資料傷害大。
 
-const VERSION = '2026-08-12·74d798';
+const VERSION = '2026-08-28·9f3c21';
 // 快取名帶「作用範圍」，因為正式站與測試站同網域不同路徑，共用一個 origin。
 // 不區分的話，一邊清快取會把另一邊的也清掉 —— 停止鍵應該只做它該做的事。
 const SCOPE_KEY = self.location.pathname
