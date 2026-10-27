@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -41,20 +42,24 @@
       background: var(--black);
       padding: calc(14px + var(--safe-top)) 20px 14px;
     }
-    .header-inner { max-width: 540px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+    .header-inner { max-width: 540px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .header-handbook { flex: 0 0 auto; }
     .header-left { display: flex; align-items: center; gap: 12px; }
     .header-bar { width: 4px; height: 32px; background: var(--yellow); border-radius: 2px; }
     .header-brand { font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(--yellow); font-weight: 700; margin-bottom: 2px; }
     .header-title { font-size: 20px; font-weight: 900; color: var(--white); letter-spacing: -0.5px; }
-    .header-role {
-      border: none; border-radius: 22px; padding: 10px 18px;
-      font-size: 13px; font-weight: 700; cursor: pointer;
-      transition: transform 0.15s; letter-spacing: 0.5px;
-      min-height: 40px;
+    /* 右上角只放「手冊」；Admin 狀態改標在 THE HOPE 旁，登入登出移到頁尾版本號旁 */
+    .header-handbook {
+      display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+      background: var(--yellow); color: var(--black); border-radius: 22px; padding: 10px 16px;
+      font-size: 14px; font-weight: 700; min-height: 40px; transition: transform 0.15s;
     }
-    .header-role:active { transform: scale(0.94); }
-    .header-role.admin { background: var(--yellow); color: var(--black); }
-    .header-role.staff { background: rgba(255,255,255,0.1); color: #BBB; }
+    .header-handbook:active { transform: scale(0.94); }
+    .header-handbook svg { width: 16px; height: 16px; }
+    .header-admin-tag { display: inline-block; margin-left: 8px; background: var(--yellow); color: var(--black); font-size: 9px; letter-spacing: 1px; line-height: 1; padding: 3px 6px; border-radius: 5px; vertical-align: 1px; }
+    .ver-admin { background: none; border: none; color: var(--muted); font-size: 11px; text-decoration: underline; text-underline-offset: 2px; padding: 8px 4px; cursor: pointer; }
+    .my-pb-link { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 700; color: var(--steel); text-decoration: none; padding: 6px 0 6px 8px; }
+    .my-pb-link svg { width: 14px; height: 14px; }
 
     .nav { background: var(--teal); padding: 0 12px; position: sticky; top: 0; z-index: 100; }
     .nav-inner { max-width: 540px; margin: 0 auto; display: flex; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
@@ -315,11 +320,11 @@
       <div class="header-left">
         <div class="header-bar"></div>
         <div>
-          <div class="header-brand">The Hope</div>
+          <div class="header-brand">The Hope<span id="adminTag" class="header-admin-tag" hidden>ADMIN</span></div>
           <div class="header-title">Hope Nation 家人們</div>
         </div>
       </div>
-      <button id="roleBtn" class="header-role staff" onclick="toggleRole()">服事夥伴</button>
+      <a id="handbookBtn" class="header-handbook" href="playbook.html"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>手冊</a>
     </div>
   </div>
 
@@ -331,7 +336,7 @@
   <div id="hnVersionFooter" style="
     text-align:center; font-size:11px; color:var(--muted); letter-spacing:.03em;
     padding:20px 12px calc(env(safe-area-inset-bottom) + 24px);">
-    版本 <span class="hn-ver">—</span>
+    版本 <span class="hn-ver">—</span> · <button id="adminBtn" class="ver-admin" onclick="toggleRole()">管理者登入</button>
   </div>
   <div id="toast" class="toast hidden"></div>
   <div id="loading" class="loading-overlay hidden">載入中...</div>
@@ -562,9 +567,9 @@
       document.getElementById('navBar').innerHTML = tabs.map(t =>
         '<button class="nav-btn ' + (activeTab === t ? 'active' : '') + '" onclick="switchTab(\'' + t + '\')">' + labels[t] + '</button>'
       ).join('');
-      const btn = document.getElementById('roleBtn');
-      btn.className = 'header-role ' + (isAdmin ? 'admin' : 'staff');
-      btn.textContent = isAdmin ? 'ADMIN' : '服事夥伴';
+      document.getElementById('adminTag').hidden = !isAdmin;
+      document.getElementById('adminBtn').textContent = isAdmin ? '登出 Admin' : '管理者登入';
+      updateHandbookLink_();
       if (!tabs.includes(activeTab)) activeTab = 'record';
       renderTab();
     }
@@ -2753,14 +2758,16 @@ function toggleRole() {
           myServe.push({ date: slot.date, session: slot.session, role: role, assigned: !!e.adminRole });
         }
       });
-      h += '<div class="card" style="margin-bottom:12px;padding:14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:' + (myServe.length?'10px':'0') + '"><div style="font-size:14px;font-weight:700;color:var(--teal)">我這期的服事</div><span style="background:var(--yellow);color:var(--black);border-radius:10px;padding:1px 9px;font-size:12px;font-weight:700">' + myServe.length + ' 場</span></div>';
+      if (viewingActive) saveMyServeRole_(myServe);
+      h += '<div class="card" style="margin-bottom:12px;padding:14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:' + (myServe.length?'10px':'0') + '"><div style="font-size:14px;font-weight:700;color:var(--teal)">我這期的服事</div><span style="background:var(--yellow);color:var(--black);border-radius:10px;padding:1px 9px;font-size:12px;font-weight:700">' + myServe.length + ' 場</span>'
+        + (myServe.length ? '<a class="my-pb-link" href="' + myPlaybookHref_() + '">看我的手冊' + lucide('chevron-right', 14) + '</a>' : '') + '</div>';
       if (!myServe.length) {
         h += '<div style="font-size:12px;color:var(--muted)">還沒選任何場次，往下點卡片把你能來的場次設成「可服事」。</div>';
       } else {
         h += '<div style="display:flex;flex-direction:column;gap:6px">';
         myServe.forEach(function(m) {
           const isHost = m.role === 'Host';
-          h += '<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="font-weight:600;color:var(--black);min-width:78px">' + schedFmtDate(m.date) + '（日）</span><span style="color:var(--muted);min-width:42px">' + m.session + '</span><span style="' + (isHost ? 'background:#FFF;border:1px solid var(--border);color:var(--muted)' : 'background:var(--teal);color:#FFF') + ';border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">' + (m.assigned ? '✓ ' : '') + esc(m.role) + '</span></div>';
+          h += '<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="font-weight:600;color:var(--black);min-width:78px">' + schedFmtDate(m.date) + '（日）</span><span style="color:var(--muted);min-width:42px">' + m.session + '</span><a href="playbook.html#' + playbookIdForRole_(m.role) + '" title="看這個角色的手冊" style="text-decoration:none;' + (isHost ? 'background:#FFF;border:1px solid var(--border);color:var(--muted)' : 'background:var(--teal);color:#FFF') + ';border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">' + (m.assigned ? '✓ ' : '') + esc(m.role) + '</a></div>';
         });
         h += '</div>';
       }
@@ -3796,6 +3803,7 @@ function toggleRole() {
         edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>',
         trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
         plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+        'chevron-right': '<path d="m9 18 6-6-6-6"/>',
         calendar: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
         'check-circle': '<path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/>',
         camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
@@ -4039,6 +4047,39 @@ function toggleRole() {
     // 把 adminRole 儲存字串（'IT·Rally'）拆回角色陣列
     function _splitRoles_(s) {
       return String(s || '').split('·').map(function(x){ return x.trim(); }).filter(Boolean);
+    }
+
+    // 服事手冊：排班角色 → 手冊頁的角色代號。一人多角色（'IT·Rally'）取排序最前的那個
+    const PLAYBOOK_ROLE_ID = { Host: 'host', '主持': 'mc', IT: 'it', Rally: 'rally', Manager: 'manager' };
+    function playbookIdForRole_(role) {
+      const rs = _splitRoles_(role).filter(function(r){ return PLAYBOOK_ROLE_ID[r]; });
+      rs.sort(function(a, b){ return _schedRoleRank_(a) - _schedRoleRank_(b); });
+      return rs.length ? PLAYBOOK_ROLE_ID[rs[0]] : 'host';
+    }
+    function todayIso_() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    // 記住「最近一場還沒到的服事」是什麼角色；右上角「手冊」直接開那個角色
+    function saveMyServeRole_(myServe) {
+      const today = todayIso_();
+      const next = myServe.filter(function(m){ return m.date >= today; })
+        .sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; })[0];
+      try {
+        if (next) localStorage.setItem('myServeRole', JSON.stringify({ pb: playbookIdForRole_(next.role), date: next.date }));
+        else localStorage.removeItem('myServeRole');
+      } catch (e) {}
+      updateHandbookLink_();
+    }
+    // 服事日過了就不再沿用，回到手冊頁自己記的上次角色
+    function myPlaybookHref_() {
+      let m = null;
+      try { m = JSON.parse(localStorage.getItem('myServeRole') || 'null'); } catch (e) {}
+      return (m && m.pb && m.date >= todayIso_()) ? 'playbook.html#' + m.pb : 'playbook.html';
+    }
+    function updateHandbookLink_() {
+      const a = document.getElementById('handbookBtn');
+      if (a) a.setAttribute('href', myPlaybookHref_());
     }
 
     // 固定角色顯示順序（James 確認）：Manager → 主持 → Rally → IT；不在清單內的角色排最後
@@ -4328,7 +4369,7 @@ function toggleRole() {
     // ============================================================
     (function () {
       // 這三個值必須同步：本檔的 VERSION、sw.js 的 VERSION、version.json 的 version
-      var VERSION = '2026-10-27·b7d2e4';
+      var VERSION = '2026-10-27·c3f81a';
       var applying = false;
 
       function showUpdatedToast(ver) {
