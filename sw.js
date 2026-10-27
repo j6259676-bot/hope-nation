@@ -7,7 +7,7 @@
 // stale-while-revalidate（先給舊資料），而那在規格階段已經被否決，
 // 理由是排班是協調型工具，錯的資料比慢的資料傷害大。
 
-const VERSION = '2026-08-28·9f3c21';
+const VERSION = '2026-10-27·b7d2e4';
 // 快取名帶「作用範圍」，因為正式站與測試站同網域不同路徑，共用一個 origin。
 // 不區分的話，一邊清快取會把另一邊的也清掉 —— 停止鍵應該只做它該做的事。
 const SCOPE_KEY = self.location.pathname
@@ -93,7 +93,11 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.endsWith('/version.json')) return;
 
   // 開啟 App 這一下：直接給快取裡的外殼，不等網路。這就是「秒開」的來源。
-  if (req.mode === 'navigate') {
+  // 只限 App 本身（./ 與 index.html）；同站其他頁面（playbook.html）走網路，
+  // 不然一律被換成 index.html，手冊頁永遠打不開。
+  const scopePath = new URL('./', self.location).pathname;
+  const isAppShell = url.pathname === scopePath || url.pathname === scopePath + 'index.html';
+  if (req.mode === 'navigate' && isAppShell) {
     event.respondWith(
       caches.match('./index.html').then((hit) => hit || fetch(req))
     );

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1E1E1E">
+  <meta name="robots" content="noindex, nofollow">
+  <title>服事手冊｜Hope Nation 家人們</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --yellow: #F2C94C; --yellow-light: #FDF6E0; --yellow-dark: #D4A82E;
+      --teal: #2D3A3A; --steel: #5A7080; --black: #1E1E1E; --white: #FFFFFF;
+      --bg: #F5F4F0; --border: #E5E2DA; --border-light: #EEEAE2; --muted: #9A9690; --text2: #5C5852;
+      --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--black); -webkit-text-size-adjust: 100%; }
+    body { padding-bottom: calc(var(--safe-bottom) + 32px); }
+    button { font-family: inherit; -webkit-appearance: none; appearance: none; border: none; background: none; cursor: pointer; color: inherit; }
+    [hidden] { display: none !important; }
+
+    .header { background: var(--black); padding: calc(12px + var(--safe-top)) 16px 12px; }
+    .header-inner { max-width: 540px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+    .back { display: flex; align-items: center; gap: 4px; color: #CFCAC0; font-size: 14px; font-weight: 500; text-decoration: none; padding: 8px 8px 8px 0; min-height: 40px; }
+    .header-title { color: var(--white); font-size: 18px; font-weight: 900; margin-left: auto; margin-right: auto; padding-right: 64px; }
+
+    .roles { background: var(--teal); position: sticky; top: 0; z-index: 10; }
+    .roles-inner { max-width: 540px; margin: 0 auto; display: flex; gap: 6px; padding: 10px 12px; overflow-x: auto; scrollbar-width: none; }
+    .roles-inner::-webkit-scrollbar { display: none; }
+    .chip { flex: 1 0 auto; padding: 8px 8px; border-radius: 20px; white-space: nowrap; font-size: 14px; font-weight: 700; color: #CFCAC0; border: 1.5px solid rgba(255,255,255,0.15); min-height: 38px; }
+    .chip[aria-selected="true"] { background: var(--yellow); color: var(--black); border-color: var(--yellow); }
+
+    .main { max-width: 540px; margin: 0 auto; padding: 16px; }
+    .intro { margin: 4px 2px 14px; }
+    .intro h1 { font-size: 24px; font-weight: 900; letter-spacing: -0.3px; }
+    .intro p { font-size: 14px; color: var(--text2); margin-top: 2px; }
+
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; }
+    .card-title { font-size: 13px; font-weight: 700; color: var(--steel); letter-spacing: 0.5px; margin-bottom: 8px; }
+    .today-row { display: grid; grid-template-columns: 84px minmax(0,1fr); gap: 10px; padding: 6px 0; border-top: 1px solid var(--border-light); font-size: 14px; line-height: 1.45; }
+    .today-row:first-of-type { border-top: none; }
+    .today-row .when { color: var(--muted); font-weight: 500; }
+    .today-row.main { background: var(--yellow-light); margin: 0 -10px; padding: 7px 10px; border-radius: 10px; border-top-color: transparent; }
+    .today-row.main + .today-row { border-top-color: transparent; }
+    .today-row.main .what { font-weight: 700; }
+    .today-row.main .when { color: var(--yellow-dark); }
+
+    .wins { background: var(--yellow-light); border-color: #F1E2AE; }
+    .wins ol { list-style: none; counter-reset: w; }
+    .wins li { counter-increment: w; display: flex; gap: 10px; align-items: baseline; font-size: 15px; font-weight: 700; padding: 5px 0; line-height: 1.45; }
+    .wins li::before { content: counter(w); flex: 0 0 22px; height: 22px; border-radius: 50%; background: var(--black); color: var(--yellow); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; transform: translateY(-1px); }
+
+    .more-head { display: flex; align-items: center; justify-content: space-between; margin: 24px 2px 8px; }
+    .more-head h2 { font-size: 16px; font-weight: 900; }
+    .toggle-all { font-size: 13px; font-weight: 700; color: var(--steel); padding: 8px 4px; min-height: 36px; }
+    .group-label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 1px; margin: 16px 4px 6px; }
+
+    .chapter { background: var(--white); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; overflow: hidden; }
+    .chapter-btn { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 14px; text-align: left; min-height: 56px; }
+    .chapter-btn .txt { flex: 1; min-width: 0; }
+    .chapter-btn .t { display: block; font-size: 15px; font-weight: 700; line-height: 1.4; }
+    .chapter-btn .s { display: block; font-size: 13px; color: var(--text2); margin-top: 2px; line-height: 1.45; }
+    .chapter-btn svg { flex: 0 0 auto; color: var(--muted); transition: transform 0.2s ease-out; }
+    .chapter-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+    .chapter-body { padding: 2px 16px 16px; border-top: 1px solid var(--border-light); font-size: 15px; line-height: 1.75; color: #2B2926; }
+    .chapter-body > * { margin-top: 10px; }
+    .chapter-body strong { font-weight: 700; color: var(--black); }
+    .chapter-body ul, .chapter-body ol { padding-left: 1.3em; }
+    .chapter-body li { margin: 4px 0; }
+    .chapter-body li ul { margin-top: 2px; }
+    .chapter-body blockquote { background: var(--bg); border-radius: 10px; padding: 10px 12px; color: var(--text2); }
+    .chapter-body table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.55; display: block; overflow-x: auto; }
+    .chapter-body th, .chapter-body td { border-bottom: 1px solid var(--border-light); padding: 8px 6px; text-align: left; vertical-align: top; }
+    .chapter-body th { font-size: 12px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+    .chapter-body td:first-child { font-weight: 700; min-width: 5.5em; }
+    .chapter-body a { color: var(--steel); word-break: break-all; }
+
+    .state { text-align: center; color: var(--text2); padding: 48px 16px; font-size: 15px; line-height: 1.7; }
+    .state a { display: inline-block; margin-top: 14px; background: var(--yellow); color: var(--black); font-weight: 700; padding: 10px 18px; border-radius: 22px; text-decoration: none; }
+
+
+    /* 圖卡版（手寫內容） */
+    .sec-head { display: flex; align-items: center; gap: 10px; margin: 0 2px 10px; }
+    .sec-ico { width: 34px; height: 34px; border-radius: 50%; background: var(--black); color: var(--yellow); display: inline-flex; align-items: center; justify-content: center; font-size: 18px; flex: 0 0 auto; }
+    .sec-head h2 { font-size: 18px; font-weight: 900; }
+    .blk { margin-bottom: 10px; }
+    .tb-bar { display: flex; gap: 4px; height: 40px; }
+    .tb-seg { border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; white-space: nowrap; }
+    .tb-seg:nth-child(1) { background: #EDE0D4; } .tb-seg:nth-child(2) { background: var(--yellow); } .tb-seg:nth-child(3) { background: var(--black); color: var(--white); }
+    .tb-list { margin-top: 10px; }
+    .tb-row { display: flex; gap: 10px; align-items: baseline; font-size: 14px; padding: 3px 0; line-height: 1.5; }
+    .tb-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; transform: translateY(1px); }
+    .tb-row b { font-weight: 700; flex: 0 0 auto; }
+    .tb-row span { color: var(--text2); }
+    .tb-note { font-size: 13px; color: var(--steel); margin-top: 8px; font-weight: 500; }
+    .say { background: var(--yellow-light); border: 1px solid #F1E2AE; border-radius: 14px; padding: 12px 14px; }
+    .say-l { font-size: 12px; font-weight: 700; color: var(--yellow-dark); display: flex; align-items: center; gap: 6px; }
+    .say p { font-size: 16px; font-weight: 500; line-height: 1.6; margin-top: 4px; }
+    .tips { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+    .tip { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 12px 10px; text-align: center; }
+    .tip-ico { width: 36px; height: 36px; border-radius: 50%; background: var(--yellow); display: inline-flex; align-items: center; justify-content: center; font-size: 18px; }
+    .tip b { display: block; font-size: 14px; font-weight: 700; margin-top: 6px; }
+    .tip .tt { display: block; font-size: 12px; color: var(--text2); margin-top: 2px; line-height: 1.45; }
+    .tips.n4 { grid-template-columns: 1fr 1fr; }
+    .callout { display: flex; gap: 8px; align-items: flex-start; background: #EEF2F4; color: #3D5363; border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 500; line-height: 1.55; }
+    .callout svg { flex: 0 0 auto; margin-top: 3px; }
+    .cases { background: var(--white); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .case + .case { border-top: 1px solid var(--border-light); }
+    .case-q { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 14px; text-align: left; font-size: 15px; font-weight: 700; min-height: 48px; line-height: 1.45; }
+    .case-q span { flex: 1; }
+    .case-q svg { color: var(--muted); flex: 0 0 auto; transition: transform 0.2s ease-out; }
+    .case-q[aria-expanded="true"] svg { transform: rotate(180deg); }
+    .case-a { padding: 0 14px 14px; font-size: 15px; line-height: 1.7; color: #2B2926; }
+    .ck { display: grid; gap: 8px; }
+    .ck-g { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+    .ck-g h3 { font-size: 13px; font-weight: 700; color: var(--steel); margin-bottom: 4px; }
+    .ck-i { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 1.55; padding: 3px 0; }
+    .ck-i svg { color: var(--yellow-dark); flex: 0 0 auto; margin-top: 4px; }
+    .shot { display: grid; grid-template-columns: 132px minmax(0,1fr); gap: 14px; background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 12px; align-items: start; }
+    .shot img { width: 100%; border-radius: 10px; border: 4px solid var(--black); display: block; }
+    .shot h3 { font-size: 16px; font-weight: 900; margin-bottom: 6px; }
+    .shot ol { list-style: none; counter-reset: s; }
+    .shot li { counter-increment: s; display: flex; gap: 8px; font-size: 14px; line-height: 1.5; padding: 3px 0; }
+    .shot li::before { content: counter(s); flex: 0 0 20px; height: 20px; border-radius: 50%; background: var(--black); color: var(--yellow); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
+    .shot-note { margin-top: 8px; font-size: 13px; font-weight: 700; background: var(--yellow-light); border-radius: 8px; padding: 6px 8px; line-height: 1.45; }
+    .nolist { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 6px 14px; }
+    .no-i { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.55; padding: 8px 0; }
+    .no-i + .no-i { border-top: 1px solid var(--border-light); }
+    .no-i svg { color: var(--muted); flex: 0 0 auto; margin-top: 3px; font-size: 16px; }
+    .no-i b { font-weight: 700; }
+    .story { background: #EDE0D4; border-radius: 14px; padding: 14px; font-size: 15px; line-height: 1.75; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .pair div { border-radius: 14px; padding: 12px; font-size: 13px; line-height: 1.5; }
+    .pair div:first-child { background: var(--black); color: #E8E2D6; } .pair div:last-child { background: var(--yellow); }
+    .pair b { display: block; font-size: 16px; font-weight: 900; margin-bottom: 2px; }
+    .pair div:first-child b { color: var(--white); }
+    .foot { text-align: center; font-size: 13px; color: var(--muted); margin-top: 22px; display: flex; gap: 6px; justify-content: center; align-items: center; }
+
+    .why { background: var(--black); color: #E8E2D6; border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; }
+    .why-k { font-size: 12px; font-weight: 700; color: var(--yellow); letter-spacing: 1px; }
+    .why p { font-size: 15px; line-height: 1.65; margin-top: 4px; color: var(--white); }
+    .why-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .why-pair div { background: rgba(255,255,255,0.08); border-radius: 10px; padding: 8px 10px; font-size: 12px; line-height: 1.5; }
+    .why-pair b { display: block; color: var(--yellow); font-size: 14px; font-weight: 900; }
+    .sec { margin-top: 10px; background: var(--white); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .sec-btn { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left; min-height: 60px; }
+    .sec-btn .txt { flex: 1; min-width: 0; }
+    .sec-btn h2 { font-size: 16px; font-weight: 900; line-height: 1.35; }
+    .sec-btn .s { display: block; font-size: 13px; color: var(--text2); margin-top: 2px; line-height: 1.45; }
+    .sec-btn > svg { color: var(--muted); flex: 0 0 auto; transition: transform 0.2s ease-out; }
+    .sec-btn[aria-expanded="true"] > svg { transform: rotate(180deg); }
+    .sec-body { padding: 4px 12px 12px; background: var(--bg); border-top: 1px solid var(--border-light); }
+    .sec-body .blk:first-child { margin-top: 8px; }
+    .more-label { font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: 1px; margin: 22px 4px 2px; }
+    .phases { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 6px 14px; }
+    .ph { display: grid; grid-template-columns: 64px minmax(0,1fr); gap: 10px; padding: 10px 0; position: relative; }
+    .ph + .ph { border-top: 1px solid var(--border-light); }
+    .ph-when { font-size: 12px; font-weight: 700; color: var(--yellow-dark); padding-top: 2px; }
+    .ph b { display: block; font-size: 15px; font-weight: 700; }
+    .ph span { display: block; font-size: 14px; color: var(--text2); line-height: 1.6; margin-top: 2px; }
+    .wide { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 10px; }
+    .wide img { width: 100%; border-radius: 8px; display: block; border: 1px solid var(--border-light); }
+    .wide h3 { font-size: 15px; font-weight: 900; margin: 10px 4px 2px; }
+    .wide p { font-size: 14px; color: var(--text2); line-height: 1.55; margin: 0 4px 4px; }
+    .set { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 4px 12px; }
+    .set-i { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; font-size: 14px; line-height: 1.5; }
+    .set-i + .set-i { border-top: 1px solid var(--border-light); }
+    .set-box { flex: 0 0 22px; height: 22px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; margin-top: 1px; }
+    .set-i.on .set-box { background: #2B6FD6; color: #fff; }
+    .set-i.off .set-box { border: 1.5px solid #C9C4BA; color: transparent; }
+    .set-i.off span.l { color: var(--muted); }
+    .set-v { display: inline-block; margin-left: 6px; font-weight: 700; background: var(--yellow-light); border-radius: 6px; padding: 0 6px; color: var(--black); }
+    .tc { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+    .tc h3 { font-size: 14px; font-weight: 700; color: var(--steel); }
+    .tc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+    .tc-grid div { background: var(--bg); border-radius: 10px; padding: 8px 4px; text-align: center; font-size: 12px; color: var(--text2); }
+    .tc-grid b { display: block; font-size: 15px; font-weight: 900; color: var(--black); margin-top: 2px; }
+    .tc p { font-size: 13px; color: var(--text2); margin-top: 8px; line-height: 1.5; }
+    @media (prefers-reduced-motion: reduce) { .chapter-btn svg { transition: none; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-inner">
+      <a class="back" href="./" aria-label="回服事 app">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        服事 app
+      </a>
+      <div class="header-title">服事手冊</div>
+    </div>
+  </div>
+  <nav class="roles" aria-label="選擇角色"><div class="roles-inner" id="roles" role="tablist"></div></nav>
+  <main class="main" id="main"><div class="state">載入中⋯</div></main>
+
+  <script src="icons.js?v=2026-10-27c"></script>
+  <script>
+    // 內容來源：帶服事 app 存的金鑰向後端拿（getPlaybooks）；本機預覽讀 playbooks.local.json
+    // 手冊內容不放在公開的 GitHub repo，所以一定要經過後端金鑰閘門
+    const API_BASE = 'https://script.google.com/macros/s/AKfycbzDjGaJylgflAuVjHW0rWJUEJWDm8VfV5iHRdzTBtCZ7RLMQTfupXDRi7_b0lJDI6xbFg/exec';
+    const IS_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    const CACHE_KEY = 'playbookCache';
+    const ROLE_KEY = 'playbookRole';
+    const CHEVRON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
+    let data = null;
+    let current = '';
+
+    function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+    function read(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+
+    function pickRole() {
+      const ids = data.roles.map(r => r.id);
+      const fromHash = decodeURIComponent(location.hash.slice(1));
+      if (ids.includes(fromHash)) return fromHash;
+      const saved = read(ROLE_KEY);
+      if (ids.includes(saved)) return saved;
+      return 'host';
+    }
+
+    function renderRoles() {
+      const el = document.getElementById('roles');
+      el.replaceChildren();
+      el.insertAdjacentHTML('beforeend', data.roles.map(r =>
+        '<button class="chip" role="tab" data-role="' + r.id + '" aria-selected="' + (r.id === current) + '">' + esc(r.label) + '</button>'
+      ).join(''));
+      el.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => selectRole(b.dataset.role)));
+      const on = el.querySelector('[aria-selected="true"]');
+      if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+    }
+
+    function renderRole() {
+      const r = data.roles.find(x => x.id === current);
+      let h = '<section class="intro"><h1>' + esc(r.label) + '</h1><p>' + esc(r.tagline) + '</p></section>';
+
+      if (r.why) {
+        h += '<section class="why" aria-label="為什麼有這個服事"><div class="why-k">為什麼有這個服事</div><p>' + esc(r.why.text) + '</p>'
+          + '<div class="why-pair">' + r.why.pair.map(p => '<div><b>' + esc(p.title) + '</b>' + esc(p.text) + '</div>').join('') + '</div></section>';
+      }
+      h += '<section class="card" aria-label="當天你在哪裡"><div class="card-title">當天你在哪裡</div>';
+      h += r.today.map(t =>
+        '<div class="today-row' + (t.main ? ' main' : '') + '"><div class="when">' + esc(t.when) + '</div><div class="what">' + esc(t.what) + '</div></div>'
+      ).join('');
+      h += '</section>';
+
+      h += '<section class="card wins" aria-label="記住這三件事"><div class="card-title">記住這三件事</div><ol>';
+      h += r.wins3.map(w => '<li>' + esc(w) + '</li>').join('');
+      h += '</ol></section>';
+
+      if (r.sections) {
+        h += '<div class="more-label">點開看細節</div>' + r.sections.map(renderSection).join('');
+        if (r.footer) h += '<div class="foot">' + icon('link') + esc(r.footer) + '</div>';
+        const main = document.getElementById('main');
+        main.replaceChildren();
+        main.insertAdjacentHTML('beforeend', h);
+        main.querySelectorAll('.sec-btn').forEach(b => b.addEventListener('click', () => {
+          const open = b.getAttribute('aria-expanded') !== 'true';
+          b.setAttribute('aria-expanded', String(open));
+          document.getElementById(b.getAttribute('aria-controls')).hidden = !open;
+        }));
+        main.querySelectorAll('.case-q').forEach(b => b.addEventListener('click', () => {
+          const open = b.getAttribute('aria-expanded') !== 'true';
+          b.setAttribute('aria-expanded', String(open));
+          document.getElementById(b.getAttribute('aria-controls')).hidden = !open;
+        }));
+        return;
+      }
+
+      h += '<div class="more-head"><h2>完整說明</h2><button class="toggle-all" id="toggleAll">全部展開</button></div>';
+      let lastGroup = null;
+      r.chapters.forEach((c, i) => {
+        const g = c.group && !/^(WHY|PURPOSE|WIN)$/.test(c.group) ? c.group : '';
+        if (g !== lastGroup) {
+          if (g) h += '<div class="group-label">' + esc(g) + '</div>';
+          lastGroup = g;
+        }
+        h += '<div class="chapter"><button class="chapter-btn" aria-expanded="false" aria-controls="ch' + i + '">'
+          + '<span class="txt"><span class="t">' + esc(c.title) + '</span><span class="s">' + esc(c.summary) + '</span></span>' + CHEVRON + '</button>'
+          + '<div class="chapter-body" id="ch' + i + '" hidden>' + c.html + '</div></div>';
+      });
+
+      const main = document.getElementById('main');
+      main.replaceChildren();
+      main.insertAdjacentHTML('beforeend', h);
+      main.querySelectorAll('.chapter-btn').forEach(b => b.addEventListener('click', () => toggleChapter(b)));
+      document.getElementById('toggleAll').addEventListener('click', toggleAll);
+    }
+
+
+    function icon(name) { return (window.ICONS && ICONS[name]) || ''; }
+    let caseSeq = 0;
+    function renderBlock(b) {
+      switch (b.type) {
+        case 'timebar': {
+          const colors = ['#EDE0D4', 'var(--yellow)', 'var(--black)'];
+          let h = '<div class="tb-bar">' + b.items.map(it => '<div class="tb-seg" style="flex:' + it.min + '">' + esc(it.label) + ' ' + it.min + "'</div>").join('') + '</div>';
+          h += '<div class="tb-list">' + b.items.map((it, i) => '<div class="tb-row"><i class="tb-dot" style="background:' + colors[i] + '"></i><b>' + esc(it.label) + '</b><span>' + esc(it.desc) + '</span></div>').join('') + '</div>';
+          if (b.note) h += '<div class="tb-note">' + esc(b.note) + '</div>';
+          return '<div class="card blk">' + h + '</div>';
+        }
+        case 'say':
+          return '<div class="say blk"><div class="say-l">' + icon('quote') + esc(b.label) + '</div><p>' + esc(b.text) + '</p></div>';
+        case 'tips':
+          return '<div class="tips blk n' + b.items.length + '">' + b.items.map(t => '<div class="tip"><span class="tip-ico">' + icon(t.icon) + '</span><b>' + esc(t.title) + '</b><span class="tt">' + esc(t.text) + '</span></div>').join('') + '</div>';
+        case 'callout':
+          return '<div class="callout blk">' + icon('info') + '<span>' + esc(b.text) + '</span></div>';
+        case 'cases':
+          return '<div class="cases blk">' + b.items.map(c => {
+            const id = 'cs' + (caseSeq++);
+            return '<div class="case"><button class="case-q" aria-expanded="false" aria-controls="' + id + '"><span>' + esc(c.q) + '</span>' + icon('chevron-down') + '</button><div class="case-a" id="' + id + '" hidden>' + esc(c.a) + '</div></div>';
+          }).join('') + '</div>';
+        case 'checklist':
+          return '<div class="ck blk">' + b.groups.map(g => '<div class="ck-g"><h3>' + esc(g.title) + '</h3>' + g.items.map(i => '<div class="ck-i">' + icon('check') + '<span>' + esc(i) + '</span></div>').join('') + '</div>').join('') + '</div>';
+        case 'shot':
+          return '<div class="shot blk"><img src="' + esc(b.img) + '" alt="' + esc(b.title) + '畫面" loading="lazy"><div><h3>' + esc(b.title) + '</h3><ol>' + b.steps.map(t => '<li>' + esc(t) + '</li>').join('') + '</ol>' + (b.note ? '<div class="shot-note">' + esc(b.note) + '</div>' : '') + '</div></div>';
+        case 'wideshot':
+          return '<div class="wide blk"><img src="' + esc(b.img) + '" alt="' + esc(b.title) + '畫面" loading="lazy"><h3>' + esc(b.title) + '</h3><p>' + esc(b.text) + '</p></div>';
+        case 'settings':
+          return '<div class="set blk">' + b.items.map(i => '<div class="set-i ' + (i.on ? 'on' : 'off') + '"><span class="set-box">' + icon('check') + '</span><span class="l">' + esc(i.label) + (i.value ? '<span class="set-v">' + esc(i.value) + '</span>' : '') + '</span></div>').join('') + '</div>';
+        case 'timecalc':
+          return '<div class="tc blk"><h3>分組時間怎麼算</h3><div class="tc-grid">' + b.rows.map(r => '<div>' + esc(r.people) + '<b>' + esc(r.min) + '</b></div>').join('') + '</div><p>' + esc(b.note) + '</p></div>';
+        case 'nolist':
+          return '<div class="nolist blk">' + b.items.map(t => { const [k, v] = t.split('：'); return '<div class="no-i">' + icon('circle-x') + '<span><b>' + esc(k) + '</b>' + (v ? '：' + esc(v) : '') + '</span></div>'; }).join('') + '</div>';
+        case 'phases':
+          return '<div class="phases blk">' + b.items.map(p => '<div class="ph"><div class="ph-when">' + esc(p.when) + '</div><div><b>' + esc(p.title) + '</b><span>' + esc(p.text) + '</span></div></div>').join('') + '</div>';
+        case 'story':
+          return '<div class="story blk">' + esc(b.text) + '</div>';
+        case 'pair':
+          return '<div class="pair blk">' + b.items.map(p => '<div><b>' + esc(p.title) + '</b>' + esc(p.text) + '</div>').join('') + '</div>';
+        default: return '';
+      }
+    }
+    let secSeq = 0;
+    function renderSection(sec) {
+      const id = 'sec' + (secSeq++);
+      return '<section class="sec"><button class="sec-btn" aria-expanded="false" aria-controls="' + id + '"><span class="sec-ico">' + icon(sec.icon) + '</span>'
+        + '<span class="txt"><h2>' + esc(sec.title) + '</h2><span class="s">' + esc(sec.summary || '') + '</span></span>' + icon('chevron-down') + '</button>'
+        + '<div class="sec-body" id="' + id + '" hidden>' + sec.blocks.map(renderBlock).join('') + '</div></section>';
+    }
+
+    function toggleChapter(btn, force) {
+      const open = force === undefined ? btn.getAttribute('aria-expanded') !== 'true' : force;
+      btn.setAttribute('aria-expanded', String(open));
+      document.getElementById(btn.getAttribute('aria-controls')).hidden = !open;
+      syncToggleAll();
+    }
+
+    function toggleAll() {
+      const btns = [...document.querySelectorAll('.chapter-btn')];
+      const anyClosed = btns.some(b => b.getAttribute('aria-expanded') !== 'true');
+      btns.forEach(b => toggleChapter(b, anyClosed));
+    }
+
+    function syncToggleAll() {
+      const btns = [...document.querySelectorAll('.chapter-btn')];
+      const allOpen = btns.length && btns.every(b => b.getAttribute('aria-expanded') === 'true');
+      const t = document.getElementById('toggleAll');
+      if (t) t.textContent = allOpen ? '全部收合' : '全部展開';
+    }
+
+    function selectRole(id) {
+      if (id === current) return;
+      current = id;
+      store(ROLE_KEY, id);
+      history.replaceState(null, '', '#' + id);
+      renderRoles();
+      renderRole();
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    function showState(msg) {
+      const main = document.getElementById('main');
+      main.replaceChildren();
+      main.insertAdjacentHTML('beforeend', '<div class="state">' + msg + '</div>');
+    }
+
+    function show(d) {
+      data = d;
+      if (!current || !data.roles.some(r => r.id === current)) current = pickRole();
+      renderRoles();
+      renderRole();
+    }
+
+    function showGate() {
+      showState('請從服事 app 打開手冊。<br>手冊只給服事夥伴看，要先用夥伴專用連結進過 app。<br><a href="./">回服事 app</a>');
+    }
+
+    async function fetchRemote(key, have) {
+      const res = await fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 簡單請求，避開 CORS preflight
+        body: JSON.stringify({ action: 'getPlaybooks', args: [have || ''], k: key })
+      });
+      return res.json();
+    }
+
+    async function init() {
+      if (IS_LOCAL) {
+        try {
+          const res = await fetch('playbooks.local.json', { cache: 'no-store' });
+          show(await res.json());
+        } catch (e) { showState('本機內容檔讀不到，先跑 tools/build_playbooks.py'); }
+        return;
+      }
+      const key = read('staffKey');
+      if (!key) { showGate(); return; }
+
+      // 先顯示手機裡上次的內容（秒開、網路不穩也看得到），再背景問後端有沒有新版
+      let cached = null;
+      try { cached = JSON.parse(read(CACHE_KEY) || 'null'); } catch (e) {}
+      if (cached && cached.roles) show(cached);
+
+      let res = null;
+      for (let i = 0; i < 2 && !res; i++) {
+        try { res = await fetchRemote(key, cached && cached.version); } catch (e) {} // GAS 偶發回 HTML，重試一次
+      }
+      if (res && res.needKey) {
+        try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
+        showGate();
+        return;
+      }
+      if (res && res.success && res.roles) {
+        store(CACHE_KEY, JSON.stringify({ version: res.version, roles: res.roles }));
+        show({ version: res.version, roles: res.roles });
+        return;
+      }
+      if (res && res.unchanged) return;
+      if (!cached) showState('手冊暫時載不出來。<br>請確認網路後再試一次。<br><a href="./">回服事 app</a>');
+    }
+
+    window.addEventListener('hashchange', () => {
+      const id = decodeURIComponent(location.hash.slice(1));
+      if (data && data.roles.some(r => r.id === id)) selectRole(id);
+    });
+    init();
+  </script>
+</body>
+</html>
